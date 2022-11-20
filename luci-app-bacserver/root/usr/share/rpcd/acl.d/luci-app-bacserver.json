@@ -1,0 +1,11 @@
+{
+	"luci-app-bacserver": {
+		"description": "Grant UCI access for luci-app-bacserver",
+		"read": {
+			"uci": [ "bacnet_dev" ]
+		},
+		"write": {
+			"uci": [ "bacnet_dev" ]
+		}
+	}
+}

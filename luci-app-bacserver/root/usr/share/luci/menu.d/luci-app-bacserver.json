@@ -1,0 +1,10 @@
+{
+	"admin/services/bacserver": {
+		"title": "BACNet Server",
+		"order": 1,
+		"action": {
+			"type": "view",
+			"path": "bacserver"
+		}
+	}
+}

@@ -1,0 +1,17 @@
+{
+	"luci-app-bacnetclient": {
+		"description": "Grant UCI access for luci-app-bacnetclient",
+		"read": {
+			"uci": [ "bacnetclient" ],
+			"ubus": {
+				"bacnetclient": [ "eventlist", "devlist", "objlist", "objdesc", "objloc", "ackevent" ]
+			}
+		},
+		"write": {
+			"uci": [ "bacnetclient" ],
+			"ubus": {
+				"bacnetclient": [ "objdesc", "objloc", "ackevent" ]
+			}
+		}
+	}
+}

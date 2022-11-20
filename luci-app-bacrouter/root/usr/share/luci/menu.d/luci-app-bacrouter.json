@@ -1,0 +1,10 @@
+{
+	"admin/services/bacrouter": {
+		"title": "BACNet Router",
+		"order": 1,
+		"action": {
+			"type": "view",
+			"path": "bacrouter"
+		}
+	}
+}

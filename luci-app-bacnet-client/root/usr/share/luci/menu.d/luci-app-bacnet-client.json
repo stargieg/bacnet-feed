@@ -1,0 +1,40 @@
+{
+	"admin/status/bacnetclient": {
+		"title": "BACNet Client",
+		"action": {
+			"type": "firstchild"
+		}
+	},
+	"admin/status/bacnetclient/eventlist": {
+		"title": "Alarmtliste",
+		"order": 1,
+		"action": {
+			"type": "view",
+			"path": "eventlist"
+		}
+	},
+	"admin/status/bacnetclient/devlist": {
+		"title": "Geräteliste",
+		"order": 2,
+		"action": {
+			"type": "view",
+			"path": "devlist"
+		}
+	},
+	"admin/status/bacnetclient/objlist": {
+		"title": "Objektliste",
+		"order": 3,
+		"action": {
+			"type": "view",
+			"path": "objlist"
+		}
+	},
+	"admin/services/bacnet": {
+		"title": "BACNet Client",
+		"order": 4,
+		"action": {
+			"type": "view",
+			"path": "bacnetclient"
+		}
+	}
+}

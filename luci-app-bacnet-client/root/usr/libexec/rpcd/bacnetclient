@@ -1,0 +1,406 @@
+#!/bin/sh
+
+#PATH=$PATH:"/Users/patrick/bacnet-stack-test/bin"
+#export BACNET_IFACE=eth0
+#*/10 * *  *  * bacwi -1 > /tmp/address_cache
+
+[ -f /lib/functions.sh ] && . /lib/functions.sh
+[ -f /usr/share/libubox/jshn.sh ] && . /usr/share/libubox/jshn.sh
+[ -f /usr/local/share/libubox/jshn.sh ] && . /usr/local/share/libubox/jshn.sh
+[ -f /lib/functions/network.sh ] && . /lib/functions/network.sh
+cd /tmp
+
+get_event() {
+	local data=$1
+	OOIFS=$IFS
+	IFS=$OIFS
+	set $data
+	local id="$1"
+	local object_type="$2"
+	local object_instance="$3"
+	object_name="$(bacrp $id $object_type $object_instance object-name | tr -d '\r')"
+	Description="$(bacrp $id $object_type $object_instance Description | tr -d '\r')"
+	json_add_string "object_instance" "$object_instance"
+	json_add_string "object_type" "$object_type"
+	json_add_string "object_name" "$object_name"
+	json_add_string "Description" "$Description"
+	event_state="$(bacrp $id $object_type $object_instance event-state | tr -d '\r')"
+	case $event_state in
+		"low limit")
+			event_state="Grenzwertunterschreitung"
+		;;
+		"high limit")
+			event_state="Grenzwertüberschreitung"
+		;;
+		"normal")
+			event_state="Normal"
+		;;
+		"fault")
+			event_state="Fehler"
+		;;
+		"offnormal")
+			event_state="Störung"
+		;;
+	esac
+	json_add_string "event_state" "$event_state"
+	json_add_string "event_time_stamp" "$(bacrp $id $object_type $object_instance event-time-stamps 1 | tr -d '\r')"
+	value="$(bacrp $1 $2 $3 present-value 2>/dev/null | tr -d '\r')"
+	case $value in
+		active*)
+			value="$(bacrp $id $object_type $object_instance active-text | tr -d '\r')"
+			json_add_string "value" "$value"
+		;;
+		inactive*)
+			value="$(bacrp $id $object_type $object_instance inactive-text | tr -d '\r')"
+			json_add_string "value" "$value"
+		;;
+		*[0-9])
+			json_add_string "value" "$value"
+			json_add_string "units" "$(bacrp $id $object_type $object_instance units | tr -d '\r')"
+			json_add_string "low_limit" "$(bacrp $id $object_type $object_instance low-limit | tr -d '\r')"
+			json_add_string "high_limit" "$(bacrp $id $object_type $object_instance high-limit | tr -d '\r')"
+		;;
+		*)
+			json_add_string "value" "0"
+		;;
+	esac
+	IFS=$OOIFS
+}
+
+get_eventlist() {
+	local id="$1"
+	local dev=""
+	support="$(bacrp $id device $id protocol-services-supported | cut -d ',' -f4)"
+	[ "$support" == "true" ] || return
+	logger -t bacnetclient "get_eventlist $id"
+	dev="$(bacrp $id device $id object-name | tr -d '\r')"
+	devdesc="$(bacrp $id device $id Description | tr -d '\r')"
+	devloc="$(bacrp $id device $id Location | tr -d '\r')"
+	OIFS=$IFS
+	IFS=$'\n'
+	for line in $(BACNET_BBMD_ADDRESS="" bacge $id|grep $id);do
+		idx=$((idx+1))
+		json_add_object 0
+		json_add_string "idx" "$idx"
+		json_add_string "devid" "$id"
+		json_add_string "devname" "$dev"
+		json_add_string "devdesc" "$devdesc"
+		json_add_string "devloc" "$devloc"
+		get_event "$line"
+		json_close_object
+	done
+	IFS=$OIFS
+}
+
+get_eventlistjson() {
+	local id="$1"
+	local dev=""
+	[ -f /tmp/bacnetclient.lock ] && return
+	touch /tmp/bacnetclient.lock
+	logger -t bacnetclient "get_eventlistjson $id"
+	support="$(bacrp $id device $id protocol-services-supported | cut -d ',' -f4)"
+	[ "$support" == "true" ] || return
+	json_init
+	json_add_array "list"
+	OIFS=$IFS
+	IFS=$'\n'
+	for line in $(BACNET_BBMD_ADDRESS="" bacge $id|grep $id);do
+		idx=$((idx+1))
+		json_add_object 0
+		json_add_string "idx" "$idx"
+		json_add_string "devid" "$id"
+		json_add_string "devname" "$dev"
+		json_add_string "devdesc" "$devdesc"
+		get_event "$line"
+		json_close_object
+	done
+	IFS=$OIFS
+	json_close_array
+	json_dump > /tmp/eventlist_$id.json.tmp
+	json_cleanup
+	mv /tmp/eventlist_$id.json.tmp /tmp/eventlist_$id.json
+	rm /tmp/bacnetclient.lock
+}
+
+get_devlist() {
+	local id="$1"
+	local dev=""
+	logger -t bacnetclient "get_devlist $id"
+	dev="$(bacrp $id device $id object-name | tr -d '\r')"
+	devdesc="$(bacrp $id device $id Description | tr -d '\r')"
+	devloc="$(bacrp $id device $id Location | tr -d '\r')"
+	json_add_object 0
+	json_add_string "devid" "$id"
+	json_add_string "object_name" "$dev"
+	json_add_string "Description" "$devdesc"
+	json_add_string "Location" "$devdesc"
+	json_close_object
+}
+
+get_objlist() {
+	local id="$1"
+	[ -f /tmp/objlist_$id.json.get ] || return
+	[ -f /tmp/bacnetclient.lock ] && return
+	touch /tmp/bacnetclient.lock
+	bacrp $id device $id object-list | tr -d '\r' | sed -e 's/{/{"list": [/' -e 's/}/]}/' -e 's/(\([a-z-]*\), \([0-9]*\))/{"\1": \2}/g' > /tmp/obj$id.json
+	json_init
+	json_load_file /tmp/obj$id.json
+	#rm /tmp/obj$id.json
+	json_select "list"
+	i=1;while json_is_a ${i} object;do
+		json_select $i
+		json_get_keys object_type
+		object_type="$(echo $object_type | tr _ -)"
+		json_get_var object_instance $object_type
+		object_name="$(bacrp $id $object_type $object_instance object-name | tr -d '\r')"
+		Description="$(bacrp $id $object_type $object_instance Description | tr -d '\r')"
+		json_add_string "devid" "$id"
+		json_add_string "object_type" "$object_type"
+		json_add_string "object_instance" "$object_instance"
+		json_add_string "object_name" "$object_name"
+		json_add_string "Description" "$Description"
+		json_select ..
+		i=$(( i + 1 ))
+	done
+	json_dump > /tmp/objlist_$id.json.tmp
+	json_cleanup
+	mv /tmp/objlist_$id.json.tmp /tmp/objlist_$id.json
+	rm -f /tmp/objlist_$id.json.get
+	rm /tmp/bacnetclient.lock
+}
+
+eventlist() {
+	[ -f /tmp/bacnetclient.lock ] && return
+	touch /tmp/bacnetclient.lock
+	[ -f /tmp/devlist.json ] || ( touch /tmp/devlist.json.get ; return )
+	local devids=""
+	json_init
+	json_load_file /tmp/devlist.json
+	json_select "list"
+	dev_idx=1;while json_is_a ${dev_idx} object;do
+		json_select ${dev_idx}
+		json_get_var devid devid
+		devids="$devids $devid"
+		json_select ..
+		dev_idx=$(( dev_idx + 1 ))
+	done
+	json_cleanup
+	local idx=0
+	logger -t bacnetclient "eventlist dev $devids"
+	json_init
+	json_add_array "list"
+	for devid in $devids; do
+		get_eventlist "$devid"
+	done
+	json_close_array
+	json_dump > /tmp/eventlist.json.tmp
+	json_cleanup
+	mv /tmp/eventlist.json.tmp /tmp/eventlist.json
+	rm /tmp/bacnetclient.lock
+}
+
+eventlistjson() {
+	[ -f /tmp/bacnetclient.lock ] && return
+	touch /tmp/bacnetclient.lock
+	local idx=0
+	logger -t bacnetclient "eventlistjson"
+	[ -f /tmp/devlist.json ] || return
+	local devids=""
+	json_init
+	json_load_file /tmp/devlist.json
+	json_select "list"
+	i=1;while json_is_a ${i} object;do
+		if [ -f /tmp/objlist_$i.json.get ] ; then
+			json_select ${i}
+			json_get_var devid devid
+			devids="$devids $devid"
+			json_select ..
+		fi
+	done
+	json_cleanup
+	for devid in $devids; do
+		get_eventlistjson "$devid"
+	done
+	rm /tmp/bacnetclient.lock
+}
+
+devlist() {
+	[ -f /tmp/bacnetclient.lock ] && return
+	touch /tmp/bacnetclient.lock
+	logger -t bacnetclient "devlist"
+	json_init
+	json_add_array "list"
+	for devid in $(bacwi | tr -d '\r' | grep -v ';' | cut -d ' ' -f 3);do
+		get_devlist "$devid"
+	done
+	json_close_array
+	json_dump > /tmp/devlist.json.tmp
+	json_cleanup
+	mv /tmp/devlist.json.tmp /tmp/devlist.json
+	rm /tmp/bacnetclient.lock
+}
+
+objlist() {
+	read data
+	json_load "$data"
+	json_get_var devid devid
+	json_cleanup
+	touch /tmp/objlist_$devid.json.get
+	[ -f /tmp/objlist_$devid.json ] && cat /tmp/objlist_$devid.json || \
+	echo '{"list": [ { "devid": "'$devid'","object_type": "wait", "object_instance": "'$(date +%M%S)'"} ] }'
+}
+
+deveventlist() {
+	read data
+	json_load "$data"
+	json_get_var devid devid
+	json_cleanup
+	touch /tmp/eventlist_$devid.json.get
+	[ -f /tmp/eventlist_$devid.json ] && cat /tmp/eventlist_$devid.json || \
+	echo '{"list": [ { "devid": "'$devid'","object_name": "wait", "Description": "'$(date +%M%S)'"} ] }'
+}
+
+objlistjson() {
+	[ -f /tmp/devlist.json ] || ( touch /tmp/devlist.json.get ; return )
+	local devids=""
+	json_init
+	json_load_file /tmp/devlist.json
+	json_select "list"
+	dev_idx=1;while json_is_a ${dev_idx} object;do
+		json_select ${dev_idx}
+		json_get_var devid devid
+		if [ -f /tmp/objlist_$devid.json.get ] ; then
+			devids="$devid $devids"
+		fi
+		json_select ..
+		dev_idx=$(( dev_idx + 1 ))
+	done
+	json_cleanup
+	logger -s -t bacnetclient "objlistjson dev $devids"
+	for devid in $devids; do
+		get_objlist "$devid"
+	done
+}
+
+write_objdesc() {
+	read data
+	json_load "$data"
+	json_get_var devid devid
+	json_get_var object_type object_type
+	json_get_var object_instance object_instance
+	json_get_var Description Description
+	json_cleanup
+	object_type="$(echo $object_type | tr _ -)"
+	logger -t bacnetclient "write $devid $object_type $object_instance $Description"
+	bacwp "$devid" "$object_type" "$object_instance" "Description" "16" "-1" "7" "$Description"
+}
+
+write_objloc() {
+	read data
+	json_load "$data"
+	json_get_var devid devid
+	json_get_var object_type object_type
+	json_get_var object_instance object_instance
+	json_get_var Location Location
+	json_cleanup
+	object_type="$(echo $object_type | tr _ -)"
+	logger -t bacnetclient "write $devid $object_type $object_instance $Location"
+	bacwp "$devid" "$object_type" "$object_instance" "Location" "16" "-1" "7" "$Location"
+}
+
+write_ackalarm() {
+	read data
+	json_load "$data"
+	json_get_var devid devid
+	json_get_var object_type object_type
+	json_get_var object_instance object_instance
+	json_get_var event_time_stamp event_time_stamp
+	process_id=10
+	state="offnormal"
+	ack_date="$(date +%Y/%m/%d-%H:%M:%S)"
+	event_time_stamp=$(($event_time_stamp/1000))
+	event_date="$(date -d @$event_time_stamp "+%Y/%m/%d-%H:%M:%S")"
+	bacackalarm "$devid" "$process_id" "$object_type" "$object_instance" "$state" "$event_date" "openwrt" "$ack_date"
+}
+get_config() {
+	config_load bacnetclient
+	config_get iface default iface "lan"
+	network_get_device ifname "$iface"
+	[ -z "$ifname" ] || export BACNET_IFACE="$ifname"
+	config_get port default port
+	#set random src port with bbmd
+	#rand="$(echo -n $(head -n 1 /dev/urandom 2>/dev/null | md5sum | cut -b 1-5))"
+	#port="$(printf "%d" "0x$rand")"
+	[ -z "$port" ] || export BACNET_IP_PORT="$port"
+	config_get bbmd_addr default bbmd_addr
+	[ -z "$bbmd_addr" ] || export BACNET_BBMD_ADDRESS="$bbmd_addr"
+	config_get bbmd_port default bbmd_port
+	[ -z "$bbmd_port" ] || export BACNET_BBMD_PORT="$bbmd_port"
+}
+
+case "$1" in
+	list)
+		json_init
+		json_add_object "eventlist"
+		json_close_object
+		json_add_object "deveventlist"
+		json_add_string "devid" "devid"
+		json_close_object
+		json_add_object "devlist"
+		json_close_object
+		json_add_object "objlist"
+		json_add_string "devid" "devid"
+		json_close_object
+		json_add_object "objdesc"
+		json_add_string "devid" "devid"
+		json_add_string "object_instance" "object_instance"
+		json_add_string "Description" "Description"
+		json_close_object
+		json_add_object "objloc"
+		json_add_string "devid" "devid"
+		json_add_string "object_instance" "object_instance"
+		json_add_string "Location" "Location"
+		json_close_object
+		json_add_object "ackevent"
+		json_add_string "devid" "devid"
+		json_add_string "object_instance" "object_instance"
+		json_add_string "event_time_stamp" "event_time_stamp"
+		json_close_object
+		json_dump
+	;;
+	call)
+		case "$2" in
+			eventlist) 
+				cat /tmp/eventlist.json || \
+				echo '{"list": [ { "idx": "0","devid": "'$(date +%M%S)'", "devname": "wait"} ] }'
+				touch /tmp/eventlist.json.get
+			;;
+			devlist) 
+				cat /tmp/devlist.json || \
+				echo '{"list": [ { "devid": "'$(date +%M%S)'","object_name": "wait"} ] }'
+				touch /tmp/devlist.json.get
+			;;
+			objlist)
+				objlist
+				touch /tmp/objlist.json.get
+			;;
+			deveventlist)
+				deveventlist
+				touch /tmp/deveventlist.json.get
+			;;
+			objdesc) write_objdesc ;;
+			objloc) write_objloc ;;
+			ackevent) write_ackalarm ;;
+			_cron)
+				[ -f /tmp/devlist.json.get ] && get_config && devlist
+				rm -f /tmp/devlist.json.get
+				[ -f /tmp/eventlist.json.get ] && get_config && eventlist
+				rm -f /tmp/eventlist.json.get
+				[ -f /tmp/objlist.json.get ] && get_config && objlistjson
+				rm -f /tmp/objlist.json.get
+				[ -f /tmp/deveventlist.json.get ] && get_config && eventlistjson
+				rm -f /tmp/deveventlist.json.get
+			;;
+		esac
+	;;
+esac
