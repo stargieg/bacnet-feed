@@ -2,13 +2,13 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=bacnet-stack
 PKG_VERSION:=1.1.0
-PKG_RELEASE:=4
+PKG_RELEASE:=5
 PKG_SOURCE_URL:=https://github.com/bacnet-stack/bacnet-stack.git
 #PKG_SOURCE_URL:=https://github.com/stargieg/bacnet-stack-upstream.git
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_DATE:=2022-09-01
-PKG_SOURCE_VERSION:=openwrt
-PKG_MIRROR_HASH:=07b8ce522b69f58960065d4079cb9c20ae6ae6cc5895dfc2d7142f451f1e02b6
+PKG_SOURCE_VERSION:=server-uci
+PKG_MIRROR_HASH:=skip
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(BUILD_VARIANT)/$(PKG_NAME)-$(PKG_VERSION)
 
 include $(INCLUDE_DIR)/package.mk
@@ -106,7 +106,7 @@ MAKE_VARS += LDFLAGS="$(TARGET_LDFLAGS)"
 ifeq ($(BUILD_VARIANT),server)
 MAKE_VARS += UCI=1
 MAKE_VARS += UCI_LIB_DIR="$(STAGING_DIR)/usr/lib"
-MAKE_VARS += BUILD=debug
+#MAKE_VARS += BUILD=debug
 MAKE_VARS += BACNET_SRC_DIR=$(PKG_BUILD_DIR)/src
 MAKE_VARS += BACNET_PORT_DIR=$(PKG_BUILD_DIR)/ports/linux
 define Build/Compile
@@ -161,6 +161,7 @@ endif
 
 define Package/bacnet-stack-server/conffiles
 /etc/config/bacnet_dev
+/etc/config/bacnet_ao
 endef
 
 define Package/bacnet-stack-router/conffiles
@@ -188,6 +189,7 @@ endef
 define Package/bacnet-stack-server/install
 	$(INSTALL_DIR) $(1)/etc/init.d $(1)/etc/config
 	$(INSTALL_CONF) ./files/bacnet_dev.config $(1)/etc/config/bacnet_dev
+	$(INSTALL_CONF) ./files/bacnet_ao.config $(1)/etc/config/bacnet_ao
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/bin/bacserv-uci $(1)/usr/sbin/bacserv-uci
 	$(INSTALL_BIN) ./files/bacserv.init $(1)/etc/init.d/bacserv
