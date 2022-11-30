@@ -2,9 +2,9 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=bacnet-stack
 PKG_VERSION:=1.1.0
-PKG_RELEASE:=5
-PKG_SOURCE_URL:=https://github.com/bacnet-stack/bacnet-stack.git
-#PKG_SOURCE_URL:=https://github.com/stargieg/bacnet-stack-upstream.git
+PKG_RELEASE:=6
+#PKG_SOURCE_URL:=https://github.com/bacnet-stack/bacnet-stack.git
+PKG_SOURCE_URL:=https://github.com/stargieg/bacnet-stack-upstream.git
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_DATE:=2022-09-01
 PKG_SOURCE_VERSION:=server-uci
