@@ -78,7 +78,7 @@ get_eventlist() {
 	devloc="$(bacrp $id device $id Location | tr -d '\r')"
 	OIFS=$IFS
 	IFS=$'\n'
-	for line in $(BACNET_BBMD_ADDRESS="" bacge $id|grep $id);do
+	for line in $(bacge $id|grep $id);do
 		idx=$((idx+1))
 		json_add_object 0
 		json_add_string "idx" "$idx"
@@ -107,7 +107,7 @@ get_eventlistjson() {
 	json_add_array "list"
 	OIFS=$IFS
 	IFS=$'\n'
-	for line in $(BACNET_BBMD_ADDRESS="" bacge $id|grep $id);do
+	for line in $(bacge $id|grep $id);do
 		idx=$((idx+1))
 		json_add_object 0
 		json_add_string "idx" "$idx"
