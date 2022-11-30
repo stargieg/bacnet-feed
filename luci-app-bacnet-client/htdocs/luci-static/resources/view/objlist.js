@@ -34,7 +34,6 @@ function createTable(data) {
 					'class': 'cbi-button cbi-button-apply',
 					'click': ui.createHandlerFn(this, function() {
 						let nameValue = document.getElementById(row.devid + '_' + row.object_type + '_' + row.object_instance).value;
-						console.log(nameValue);
 						return callsetData(row.devid,row.object_type,row.object_instance,nameValue);
 					})
 				}, 
@@ -64,20 +63,18 @@ return view.extend({
 
 		var tr = E('table', { 'class': 'table' });
 		tr.appendChild(E('tr', { 'class': 'tr cbi-section-table-titles' }, [
+			E('th', { 'class': 'th left' }, [ '' ]),
 			E('th', { 'class': 'th left' }, [ 'Dev ID' ]),
 			E('th', { 'class': 'th left' }, [ 'Typ' ]),
 			E('th', { 'class': 'th left' }, [ 'Instanz' ]),
 			E('th', { 'class': 'th left' }, [ 'Name' ]),
-			E('th', { 'class': 'th left' }, [ 'Beschreibung' ]),
-			E('th', { 'class': 'th left' }, [ '' ])
+			E('th', { 'class': 'th left' }, [ 'Beschreibung' ])
 		]));
 		let params = new URLSearchParams(document.location.search);
 		let devid = params.get("devid");
-		console.log(devid);
         poll.add(() => {
             Promise.all([
 				callgetData(devid)
-				//callgetData('104020')
             ]).then((results) => {
                 cbi_update_table(tr, createTable(results[0]));
             })

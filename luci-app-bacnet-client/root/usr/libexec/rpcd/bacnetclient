@@ -100,6 +100,9 @@ get_eventlistjson() {
 	logger -t bacnetclient "get_eventlistjson $id"
 	support="$(bacrp $id device $id protocol-services-supported | cut -d ',' -f4)"
 	[ "$support" == "true" ] || return
+	dev="$(bacrp $id device $id object-name | tr -d '\r')"
+	devdesc="$(bacrp $id device $id Description | tr -d '\r')"
+	devloc="$(bacrp $id device $id Location | tr -d '\r')"
 	json_init
 	json_add_array "list"
 	OIFS=$IFS
@@ -111,6 +114,7 @@ get_eventlistjson() {
 		json_add_string "devid" "$id"
 		json_add_string "devname" "$dev"
 		json_add_string "devdesc" "$devdesc"
+		json_add_string "devloc" "$devloc"
 		get_event "$line"
 		json_close_object
 	done
@@ -133,7 +137,7 @@ get_devlist() {
 	json_add_string "devid" "$id"
 	json_add_string "object_name" "$dev"
 	json_add_string "Description" "$devdesc"
-	json_add_string "Location" "$devdesc"
+	json_add_string "Location" "$devloc"
 	json_close_object
 }
 

@@ -40,7 +40,8 @@ return view.extend({
 		o.optional = true;
 		o.datatype = "host";
 		o = s.option(form.Value, "bbmd_port", _("BBMD IP Port"), "47808");
-		o.depends('bbmd_addr');
+		o.depends('bacdl', 'bip');
+		o.depends('bacdl', 'bip6');
 		o.optional = true;
 		o.placeholder = 47808;
 		o.datatype = "portrange";
