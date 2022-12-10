@@ -19,16 +19,15 @@ var callsetData = rpc.declare({
 function createTable(data) {
     let tableData = [];
     data.list.forEach(row => {
-		let description = [
+		let description =
 			E('input', {
 				'class': 'cbi-input-text',
 				'id': row.devid + '_' + row.object_type + '_' + row.object_instance,
 				'type': 'text',
 				'value': row.Description,
 				'style': 'width:30em'
-			})
-		];
-		let apply = [
+			});
+		let apply =
 			E('span', { 'class': 'control-group' }, [
 				E('button', {
 					'class': 'cbi-button cbi-button-apply',
@@ -38,8 +37,7 @@ function createTable(data) {
 					})
 				}, 
 				_('Speichern')),
-			])
-		];
+			]);
 		tableData.push([
             apply,
             row.devid,

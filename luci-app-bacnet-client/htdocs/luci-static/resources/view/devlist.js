@@ -23,7 +23,7 @@ var callsetDataLoc = rpc.declare({
 function createTable(data) {
     let tableData = [];
     data.list.forEach(row => {
-		let dp = [
+		let dp =
 			E('span', { 'class': 'control-group' }, [
 				E('button', {
 					'class': 'cbi-button cbi-button-apply',
@@ -33,16 +33,16 @@ function createTable(data) {
 					})
 				},
 				_('Datenpunkte')),
-			])
-		];
-		let description = [
+			]);
+		let description =
 			E('input', {
 				'class': 'cbi-input-text',
 				'id': row.devid + '_device_' + row.devid,
 				'type': 'text',
 				'value': row.Description,
 				'style': 'width:30em'
-			}),
+			});
+			let description_apply =
 			E('span', { 'class': 'control-group' }, [
 				E('button', {
 					'class': 'cbi-button cbi-button-apply',
@@ -53,16 +53,16 @@ function createTable(data) {
 					})
 				}, 
 				_('Speichern')),
-			])
-		];
-		let location = [
+			]);
+		let location =
 			E('input', {
 				'class': 'cbi-input-text',
 				'id': row.devid + '_device_' + row.devid + '_loc',
 				'type': 'text',
 				'value': row.Location,
 				'style': 'width:30em'
-			}),
+			});
+			let location_apply =
 			E('span', { 'class': 'control-group' }, [
 				E('button', {
 					'class': 'cbi-button cbi-button-apply',
@@ -73,14 +73,15 @@ function createTable(data) {
 					})
 				}, 
 				_('Speichern')),
-			])
-		];
+			]);
 		tableData.push([
             dp,
             row.devid,
             row.object_name,
             description,
-            location
+            description_apply,
+            location,
+            location_apply
         ])
     });
     return tableData;
@@ -101,7 +102,9 @@ return view.extend({
 			E('th', { 'class': 'th left' }, [ 'ID' ]),
 			E('th', { 'class': 'th left' }, [ 'Name' ]),
 			E('th', { 'class': 'th left' }, [ 'Beschreibung' ]),
+			E('th', { 'class': 'th left' }, [ 'Speichern' ]),
 			E('th', { 'class': 'th left' }, [ 'Ort' ]),
+			E('th', { 'class': 'th left' }, [ 'Speichern' ])
 		]));
         poll.add(() => {
             Promise.all([

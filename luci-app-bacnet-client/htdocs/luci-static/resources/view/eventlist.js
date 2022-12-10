@@ -20,7 +20,7 @@ function createTable(data) {
     data.list.forEach(row => {
 		let event_time_stamp = Date.parse(row.event_time_stamp);
 		let event_time_stamp_loc = new Date(event_time_stamp);
-		let ack = [
+		let ack =
 			E('span', { 'class': 'control-group' }, [
 				E('button', {
 					'class': 'cbi-button cbi-button-apply',
@@ -29,8 +29,7 @@ function createTable(data) {
 					})
 				}, 
 				_('Quit')),
-			])
-		];
+			]);
 		tableData.push([
 			ack,
             row.idx,
