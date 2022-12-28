@@ -2,7 +2,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=bacnet-stack
 PKG_VERSION:=1.1.0
-PKG_RELEASE:=9
+PKG_RELEASE:=10
 #PKG_SOURCE_URL:=https://github.com/bacnet-stack/bacnet-stack.git
 PKG_SOURCE_URL:=https://github.com/stargieg/bacnet-stack-upstream.git
 PKG_SOURCE_PROTO:=git
@@ -192,6 +192,8 @@ define Package/bacnet-stack-server/install
 	$(INSTALL_DIR) $(1)/etc/init.d $(1)/etc/config
 	$(INSTALL_CONF) ./files/bacnet_dev.config $(1)/etc/config/bacnet_dev
 	$(INSTALL_CONF) ./files/bacnet_nc.config $(1)/etc/config/bacnet_nc
+	$(INSTALL_CONF) ./files/bacnet_sc.config $(1)/etc/config/bacnet_sc
+	$(INSTALL_CONF) ./files/bacnet_tl.config $(1)/etc/config/bacnet_tl
 	$(INSTALL_CONF) ./files/bacnet_ao.config $(1)/etc/config/bacnet_ao
 	$(INSTALL_CONF) ./files/bacnet_av.config $(1)/etc/config/bacnet_av
 	$(INSTALL_DIR) $(1)/usr/sbin
