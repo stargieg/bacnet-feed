@@ -2,7 +2,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=bacnet-stack
 PKG_VERSION:=1.1.0
-PKG_RELEASE:=10
+PKG_RELEASE:=11
 #PKG_SOURCE_URL:=https://github.com/bacnet-stack/bacnet-stack.git
 PKG_SOURCE_URL:=https://github.com/stargieg/bacnet-stack-upstream.git
 PKG_SOURCE_PROTO:=git
@@ -162,6 +162,8 @@ endif
 define Package/bacnet-stack-server/conffiles
 /etc/config/bacnet_dev
 /etc/config/bacnet_nc
+/etc/config/bacnet_sc
+/etc/config/bacnet_tl
 /etc/config/bacnet_ao
 /etc/config/bacnet_av
 endef
