@@ -16,7 +16,7 @@ index 7b34acda..b6c7eda1 100644
 -                    }
 -                }
 -                ret_val += slen;
- #ifdef __STDC_ISO_10646__
+ #if (__STDC_VERSION__ >= 199901L) && defined (__STDC_ISO_10646__)
                  if (characterstring_encoding(&value->type.Character_String) ==
                      CHARACTER_UTF8) {
 @@ -1956,11 +1946,7 @@ int bacapp_snprintf_value(
