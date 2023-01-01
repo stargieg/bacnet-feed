@@ -2,10 +2,12 @@
 	"luci-app-bacserver": {
 		"description": "Grant UCI access for luci-app-bacserver",
 		"read": {
-			"uci": [ "bacnet_dev" ]
+			"uci": [ "bacnet_dev", "bacnet_ao", "bacnet_av", "bacnet_nc",
+			"bacnet_sc", "bacnet_tl" ]
 		},
 		"write": {
-			"uci": [ "bacnet_dev" ]
+			"uci": [ "bacnet_dev", "bacnet_ao", "bacnet_av", "bacnet_nc",
+			"bacnet_sc", "bacnet_tl" ]
 		}
 	}
 }

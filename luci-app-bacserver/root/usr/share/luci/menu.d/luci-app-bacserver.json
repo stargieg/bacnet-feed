@@ -6,5 +6,53 @@
 			"type": "view",
 			"path": "bacserver"
 		}
+	},
+	"admin/services/bacserver/dev": {
+		"title": "BACNet Server",
+		"order": 1,
+		"action": {
+			"type": "view",
+			"path": "bacserver"
+		}
+	},
+	"admin/services/bacserver/ao": {
+		"title": "Analog Ouput",
+		"order": 2,
+		"action": {
+			"type": "view",
+			"path": "bac_ao"
+		}
+	},
+	"admin/services/bacserver/av": {
+		"title": "Analog Value",
+		"order": 3,
+		"action": {
+			"type": "view",
+			"path": "bac_av"
+		}
+	},
+	"admin/services/bacserver/nc": {
+		"title": "Notification Class",
+		"order": 4,
+		"action": {
+			"type": "view",
+			"path": "bac_nc"
+		}
+	},
+	"admin/services/bacserver/sc": {
+		"title": "Schedule",
+		"order": 5,
+		"action": {
+			"type": "view",
+			"path": "bac_sc"
+		}
+	},
+	"admin/services/bacserver/tl": {
+		"title": "Trendlog",
+		"order": 6,
+		"action": {
+			"type": "view",
+			"path": "bac_tl"
+		}
 	}
 }
