@@ -57,6 +57,10 @@ return view.extend({
 		o.optional = true;
 		o.rmempty = true;
 		o.datatype = "ufloat";
+		o = s.option( form.Value, "resolution", _("Resolution"), "0.1");
+		o.optional = true;
+		o.rmempty = true;
+		o.datatype = "ufloat";
 		o = s.option( form.Value, "min_value", _("Min Value"), "0");
 		o.optional = true;
 		o.rmempty = true;
