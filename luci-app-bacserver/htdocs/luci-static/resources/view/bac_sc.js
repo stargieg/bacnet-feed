@@ -57,7 +57,7 @@ return view.extend({
 		o.optional = true;
 		o.rmempty = true;
 		o.datatype = "string";
-		o = s.option( form.DynamicList, "references", _("Reference Objects"), "ai=0 ao=1 av=2 bi=3 bo=4 bv=5 mi=13 mo=14 mv=19, Instance ID");
+		o = s.option( form.DynamicList, "references", _("Reference Objects"), "Device ID (-1 for local), ai=0 ao=1 av=2 bi=3 bo=4 bv=5 mi=13 mo=14 mv=19, Instance ID");
 		o.optional = true;
 		o.rmempty = true;
 		o.datatype = "string";
