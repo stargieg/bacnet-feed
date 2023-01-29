@@ -48,11 +48,19 @@
 		}
 	},
 	"admin/services/bacserver/bv": {
-		"title": "Binary Output",
+		"title": "Binary Value",
 		"order": 6,
 		"action": {
 			"type": "view",
 			"path": "bac_bv"
+		}
+	},
+	"admin/services/bacserver/bi": {
+		"title": "Binary Input",
+		"order": 6,
+		"action": {
+			"type": "view",
+			"path": "bac_bi"
 		}
 	},
 	"admin/services/bacserver/nc": {
