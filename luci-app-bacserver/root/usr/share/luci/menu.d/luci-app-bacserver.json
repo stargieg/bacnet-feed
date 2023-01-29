@@ -33,15 +33,23 @@
 	},
 	"admin/services/bacserver/ai": {
 		"title": "Analog Input",
-		"order": 3,
+		"order": 4,
 		"action": {
 			"type": "view",
 			"path": "bac_ai"
 		}
 	},
+	"admin/services/bacserver/bo": {
+		"title": "Binary Output",
+		"order": 5,
+		"action": {
+			"type": "view",
+			"path": "bac_bo"
+		}
+	},
 	"admin/services/bacserver/nc": {
 		"title": "Notification Class",
-		"order": 4,
+		"order": 6,
 		"action": {
 			"type": "view",
 			"path": "bac_nc"
@@ -49,7 +57,7 @@
 	},
 	"admin/services/bacserver/sc": {
 		"title": "Schedule",
-		"order": 5,
+		"order": 7,
 		"action": {
 			"type": "view",
 			"path": "bac_sc"
@@ -57,7 +65,7 @@
 	},
 	"admin/services/bacserver/tl": {
 		"title": "Trendlog",
-		"order": 6,
+		"order": 8,
 		"action": {
 			"type": "view",
 			"path": "bac_tl"
