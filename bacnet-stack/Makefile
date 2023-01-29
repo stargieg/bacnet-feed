@@ -168,6 +168,7 @@ define Package/bacnet-stack-server/conffiles
 /etc/config/bacnet_av
 /etc/config/bacnet_ai
 /etc/config/bacnet_bo
+/etc/config/bacnet_bv
 endef
 
 define Package/bacnet-stack-router/conffiles
@@ -202,6 +203,7 @@ define Package/bacnet-stack-server/install
 	$(INSTALL_CONF) ./files/bacnet_av.config $(1)/etc/config/bacnet_av
 	$(INSTALL_CONF) ./files/bacnet_ai.config $(1)/etc/config/bacnet_ai
 	$(INSTALL_CONF) ./files/bacnet_bo.config $(1)/etc/config/bacnet_bo
+	$(INSTALL_CONF) ./files/bacnet_bv.config $(1)/etc/config/bacnet_bv
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/bin/bacserv-uci $(1)/usr/sbin/bacserv-uci
 	$(INSTALL_BIN) ./files/bacserv.init $(1)/etc/init.d/bacserv

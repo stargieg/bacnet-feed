@@ -47,9 +47,17 @@
 			"path": "bac_bo"
 		}
 	},
+	"admin/services/bacserver/bv": {
+		"title": "Binary Output",
+		"order": 6,
+		"action": {
+			"type": "view",
+			"path": "bac_bv"
+		}
+	},
 	"admin/services/bacserver/nc": {
 		"title": "Notification Class",
-		"order": 6,
+		"order": 11,
 		"action": {
 			"type": "view",
 			"path": "bac_nc"
@@ -57,7 +65,7 @@
 	},
 	"admin/services/bacserver/sc": {
 		"title": "Schedule",
-		"order": 7,
+		"order": 12,
 		"action": {
 			"type": "view",
 			"path": "bac_sc"
@@ -65,7 +73,7 @@
 	},
 	"admin/services/bacserver/tl": {
 		"title": "Trendlog",
-		"order": 8,
+		"order": 13,
 		"action": {
 			"type": "view",
 			"path": "bac_tl"
