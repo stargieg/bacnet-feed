@@ -63,6 +63,14 @@
 			"path": "bac_bi"
 		}
 	},
+	"admin/services/bacserver/mo": {
+		"title": "Multistate Output",
+		"order": 7,
+		"action": {
+			"type": "view",
+			"path": "bac_mo"
+		}
+	},
 	"admin/services/bacserver/nc": {
 		"title": "Notification Class",
 		"order": 11,
