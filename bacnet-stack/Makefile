@@ -2,11 +2,11 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=bacnet-stack
 PKG_VERSION:=1.1.0
-PKG_RELEASE:=16
+PKG_RELEASE:=18
 #PKG_SOURCE_URL:=https://github.com/bacnet-stack/bacnet-stack.git
 PKG_SOURCE_URL:=https://github.com/stargieg/bacnet-stack-upstream.git
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_DATE:=2023-01-29
+PKG_SOURCE_DATE:=2023-02-02
 PKG_SOURCE_VERSION:=server-uci
 PKG_MIRROR_HASH:=skip
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(BUILD_VARIANT)/$(PKG_NAME)-$(PKG_VERSION)
@@ -170,6 +170,8 @@ define Package/bacnet-stack-server/conffiles
 /etc/config/bacnet_bo
 /etc/config/bacnet_bv
 /etc/config/bacnet_bi
+/etc/config/bacnet_mo
+/etc/config/bacnet_mv
 endef
 
 define Package/bacnet-stack-router/conffiles
@@ -206,6 +208,8 @@ define Package/bacnet-stack-server/install
 	$(INSTALL_CONF) ./files/bacnet_bo.config $(1)/etc/config/bacnet_bo
 	$(INSTALL_CONF) ./files/bacnet_bv.config $(1)/etc/config/bacnet_bv
 	$(INSTALL_CONF) ./files/bacnet_bv.config $(1)/etc/config/bacnet_bi
+	$(INSTALL_CONF) ./files/bacnet_mo.config $(1)/etc/config/bacnet_mo
+	$(INSTALL_CONF) ./files/bacnet_mo.config $(1)/etc/config/bacnet_mv
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/bin/bacserv-uci $(1)/usr/sbin/bacserv-uci
 	$(INSTALL_BIN) ./files/bacserv.init $(1)/etc/init.d/bacserv

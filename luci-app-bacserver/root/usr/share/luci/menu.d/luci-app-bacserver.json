@@ -71,6 +71,14 @@
 			"path": "bac_mo"
 		}
 	},
+	"admin/services/bacserver/mv": {
+		"title": "Multistate Value",
+		"order": 8,
+		"action": {
+			"type": "view",
+			"path": "bac_mv"
+		}
+	},
 	"admin/services/bacserver/nc": {
 		"title": "Notification Class",
 		"order": 11,
