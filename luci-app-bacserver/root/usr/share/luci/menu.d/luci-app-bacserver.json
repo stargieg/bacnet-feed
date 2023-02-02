@@ -79,6 +79,14 @@
 			"path": "bac_mv"
 		}
 	},
+	"admin/services/bacserver/mi": {
+		"title": "Multistate Input",
+		"order": 9,
+		"action": {
+			"type": "view",
+			"path": "bac_mi"
+		}
+	},
 	"admin/services/bacserver/nc": {
 		"title": "Notification Class",
 		"order": 11,
