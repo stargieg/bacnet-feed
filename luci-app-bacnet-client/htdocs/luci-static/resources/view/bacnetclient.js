@@ -18,7 +18,7 @@ return view.extend({
 		o.value('ethernet','Ethernet');
 		o.value('mstp','MSTP/RS485');
 		o.optional = true;
-		o = s.option(widgets.NetworkSelect, 'iface', _('Device name', 'lan'));
+		o = s.option(widgets.DeviceSelect, 'iface', _('Device name', 'br-lan'));
 		o.depends('bacdl', 'arcnet');
         o.depends('bacdl', 'bip');
 		o.depends('bacdl', 'bip6');
@@ -90,6 +90,14 @@ return view.extend({
 		o.value("1");
 		o.value("2");
 		o.optional = true;
+		o = s.option(form.DynamicList, "deny_list", _("Trendlog deny list"), "devid");
+		o.optional = true;
+		o = s.option(form.Flag, 'debug', _('Debug Log'));
+		o.rmempty = false;
+		o = s.option( form.Value, "interval", _("Pull interval"), "seconds");
+		o.optional = true;
+		o.rmempty = true;
+		o.datatype = "port";
 		return m.render();
 	}
 });

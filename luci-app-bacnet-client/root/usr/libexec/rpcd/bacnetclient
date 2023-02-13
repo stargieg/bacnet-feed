@@ -146,7 +146,32 @@ get_objlist() {
 	[ -f /tmp/objlist_$id.json.get ] || return
 	[ -f /tmp/bacnetclient.lock ] && return
 	touch /tmp/bacnetclient.lock
-	bacrp $id device $id object-list | tr -d '\r' | sed -e 's/{/{"list": [/' -e 's/}/]}/' -e 's/(\([a-z-]*\), \([0-9]*\))/{"\1": \2}/g' > /tmp/obj$id.json
+	status=0
+	bacrp $id device $id object-list > /tmp/obj$id.json.tmp || status=1
+	if [ "$status" == "0" ]; then
+		cat /tmp/obj$id.json.tmp | tr -d '\r' | sed -e 's/{/{"list": [/' -e 's/}/]}/' -e 's/(\([a-z-]*\), \([0-9]*\))/{"\1": \2}/g' > /tmp/obj$id.json
+		rm -f /tmp/obj$id.json.tmp
+	else
+		#TODO Segmentation Not Supported
+		i=1
+		echo '{"list": [' > /tmp/obj$id.json
+		bacrp $id device $id object-list $i > /tmp/obj$id.json.tmp || status=0
+		if [ "$status" == "1" ]; then
+			cat /tmp/obj$id.json.tmp | tr -d '\r' | sed -e 's/(\([a-z-]*\), \([0-9]*\))/{"\1": \2}/g' >> /tmp/obj$id.json
+		fi
+		rm -f /tmp/obj$id.json.tmp
+		while [ "$status" == "1" ] ; do
+			i=$(( i + 1 ))
+			bacrp $id device $id object-list $i > /tmp/obj$id.json.tmp || status=0
+			if [ "$status" == "1" ]; then
+				echo "," >> /tmp/obj$id.json
+				cat /tmp/obj$id.json.tmp | tr -d '\r' | sed -e 's/(\([a-z-]*\), \([0-9]*\))/{"\1": \2}/g' >> /tmp/obj$id.json
+			fi
+			rm -f /tmp/obj$id.json.tmp
+		done
+		echo "" >> /tmp/obj$id.json
+		echo ']}' >> /tmp/obj$id.json
+	fi
 	json_init
 	json_load_file /tmp/obj$id.json
 	#rm /tmp/obj$id.json
@@ -329,8 +354,8 @@ write_ackalarm() {
 get_config() {
 	config_load bacnetclient
 	config_get iface default iface "lan"
-	network_get_device ifname "$iface"
-	[ -z "$ifname" ] || export BACNET_IFACE="$ifname"
+	config_get iface default iface "br-lan"
+	[ -z "$iface" ] || export BACNET_IFACE="$iface"
 	config_get port default port
 	#set random src port with bbmd
 	#rand="$(echo -n $(head -n 1 /dev/urandom 2>/dev/null | md5sum | cut -b 1-5))"
