@@ -10,7 +10,7 @@ BACNET_INTERVAL="900"
 
 log() {
 	if [ "$BACNET_DEBUG" == "1" ] ; then
-		logger -t bacnet "$@"
+		logger -t collectd-bacnet "$@"
 	fi
 }
 
@@ -45,9 +45,12 @@ get_config() {
 
 while true; do
 	get_config
-	[ -f /tmp/devlist.json ] || touch /tmp/devlist.json.get
-	[ -f /tmp/devlist.json ] || sleep 10
-	[ -f /tmp/devlist.json ] || continue
+	if [ ! -f /tmp/devlist.json ] ; then
+		touch /tmp/devlist.json.get
+		log "sleep 10 /tmp/devlist.json.get"
+		sleep 10
+		continue
+	fi
 	devids=""
 	json_load_file /tmp/devlist.json
 	json_select "list"
@@ -68,14 +71,25 @@ while true; do
 		json_select ..
 	done
 	log "devids: $devids"
-	[ "$devids" == "" ] && touch /tmp/devlist.json.get
 	json_cleanup
+	if [ "$devids" == "" ] ; then
+		touch /tmp/devlist.json.get
+		log "sleep 10 /tmp/devlist.json.get no device"
+		sleep 10
+		continue
+	fi
+	interval_offset=0
 	for devid in $devids; do
-		[ -f /tmp/obj$devid.json ] || touch /tmp/objlist_$devid.json.get
-		if [ -f /tmp/obj$devid.json ] ; then
-			json_load_file /tmp/obj$devid.json
-			json_select "list"
+		if [ ! -f /tmp/objlist_$devid.json ] ; then
+			touch /tmp/objlist.json.get
+			touch /tmp/objlist_$devid.json.get
+			log "sleep 10 /tmp/objlist_$devid.json.get"
+			sleep 10
+			interval_offset="$BACNET_INTERVAL"
+			continue
 		fi
+		json_load_file /tmp/obj$devid.json
+		json_select "list"
 		objs=""
 		l=1;while json_is_a ${l} object;do
 			json_select ${l}
@@ -90,6 +104,14 @@ while true; do
 		done
 		log "objs: $objs"
 		json_cleanup
+		if [ "$objs" == "" ] ; then
+			touch /tmp/objlist.json.get
+			touch /tmp/objlist_$devid.json.get
+			log "sleep 10 /tmp/objlist_$devid.json.get no objects"
+			sleep 10
+			interval_offset="$BACNET_INTERVAL"
+			continue
+		fi
 		for obj_id in $objs ; do
 			log "bacrp $devid trend-log $obj_id 141"
 			count="$(bacrp $devid trend-log $obj_id 141 | tr -d '\r')"
@@ -219,6 +241,6 @@ while true; do
 		done
 		log "devid $devids $devid"
 	done
-	log "sleep $BACNET_INTERVAL"
-	sleep "$BACNET_INTERVAL"
+	log "sleep $(( BACNET_INTERVAL - interval_offset ))"
+	sleep "$(( BACNET_INTERVAL - interval_offset ))"
 done
