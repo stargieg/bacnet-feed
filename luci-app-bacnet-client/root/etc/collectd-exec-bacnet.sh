@@ -68,6 +68,7 @@ while true; do
 		json_select ..
 	done
 	log "devids: $devids"
+	[ "$devids" == "" ] && touch /tmp/devlist.json.get
 	json_cleanup
 	for devid in $devids; do
 		[ -f /tmp/obj$devid.json ] || touch /tmp/objlist_$devid.json.get
