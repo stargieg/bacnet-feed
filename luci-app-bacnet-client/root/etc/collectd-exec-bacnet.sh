@@ -4,6 +4,8 @@
 [ -f /lib/functions.sh ] && . /lib/functions.sh
 [ -f /usr/share/libubox/jshn.sh ] && . /usr/share/libubox/jshn.sh
 
+set -o pipefail
+
 HOST="$COLLECTD_HOSTNAME"
 INTERVAL=$(echo ${COLLECTD_INTERVAL:-8} | cut -d . -f 1)
 BACNET_INTERVAL="900"
@@ -115,8 +117,10 @@ while true; do
 		for obj_id in $objs ; do
 			log "bacrp $devid trend-log $obj_id 141"
 			count="$(bacrp $devid trend-log $obj_id 141 | tr -d '\r')"
+			[ "$?" == "0" ] || continue
 			log "bacrp $devid trend-log $obj_id 132"
 			ref="$(bacrp $devid trend-log $obj_id 132 | tr -d '\r')"
+			[ "$?" == "0" ] || continue
 			j=1
 			ref_devid="$devid"
 			for opt in $ref ; do
@@ -129,22 +133,29 @@ while true; do
 				j=$(( j + 1 ))
 			done
 			dev_name="$(bacrp $ref_devid device $ref_devid object-name | tr -d '\r' | tr -s ' ' '_' | sed 's/\ä/ae/g;s/\Ä/Ae/g;s/\ö/oe/g;s/\Ö/Oe/g;s/\ü/ue/g;s/\Ü/Ue/g;s/\ß/ss/g')"
+			[ "$?" == "0" ] || continue
 			object_name="$(bacrp $ref_devid $ref_object_type $ref_object_instance object-name | tr -d '\r' | tr -s ' ' '_' | sed 's/\ä/ae/g;s/\Ä/Ae/g;s/\ö/oe/g;s/\Ö/Oe/g;s/\ü/ue/g;s/\Ü/Ue/g;s/\ß/ss/g')"
+			[ "$?" == "0" ] || continue
 			Description="$(bacrp $ref_devid $ref_object_type $ref_object_instance Description | tr -d '\r' | tr -s ' ' '_'| sed 's/\ä/ae/g;s/\Ä/Ae/g;s/\ö/oe/g;s/\Ö/Oe/g;s/\ü/ue/g;s/\Ü/Ue/g;s/\ß/ss/g')"
+			[ "$?" == "0" ] || continue
+			ret=0
 			case $ref_object_type in
 				analog*)
 					log "bacrp $ref_devid $ref_object_type $ref_object_instance units"
 					value_units="$(bacrp $ref_devid $ref_object_type $ref_object_instance units | tr -d '\r')"
+					ret="$?"
 					;;
 				binary*)
 					log "bacrp $ref_devid $ref_object_type $ref_object_instance state"
 					value_units="binary"
+					ret="$?"
 					;;
 				*)
 					value_units="unknown"
 					count=-1
 					;;
 			esac
+			[ "$ret" == "0" ] || continue
 			case $value_units in
 				cubic-meters-per-hour)
 					collectd_plugin="flowrate"

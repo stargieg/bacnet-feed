@@ -8,7 +8,16 @@
 [ -f /usr/share/libubox/jshn.sh ] && . /usr/share/libubox/jshn.sh
 [ -f /usr/local/share/libubox/jshn.sh ] && . /usr/local/share/libubox/jshn.sh
 [ -f /lib/functions/network.sh ] && . /lib/functions/network.sh
+
+set -o pipefail
+
 cd /tmp
+
+log() {
+	if [ "$BACNET_DEBUG" == "1" ] ; then
+		logger -t bacnetclient "$@"
+	fi
+}
 
 get_event() {
 	local data=$1
@@ -19,18 +28,26 @@ get_event() {
 	local object_type="$2"
 	local object_instance="$3"
 	object_name="$(bacrp $id $object_type $object_instance object-name | tr -d '\r')"
+	[ "$?" == "0" ] || return
 	Description="$(bacrp $id $object_type $object_instance Description | tr -d '\r')"
+	[ "$?" == "0" ] || return
+	event_state="$(bacrp $id $object_type $object_instance event-state | tr -d '\r')"
+	[ "$?" == "0" ] || return
+	event_time_stamp="$(bacrp $id $object_type $object_instance event-time-stamps 1 | tr -d '\r')"
+	[ "$?" == "0" ] || return
 	json_add_string "object_instance" "$object_instance"
 	json_add_string "object_type" "$object_type"
 	json_add_string "object_name" "$object_name"
 	json_add_string "Description" "$Description"
-	event_state="$(bacrp $id $object_type $object_instance event-state | tr -d '\r')"
+	event_state_u="$event_state"
 	case $event_state in
 		"low limit")
 			event_state="Grenzwertunterschreitung"
+			event_state_u="low_limit"
 		;;
 		"high limit")
 			event_state="Grenzwertüberschreitung"
+			event_state_u="high_limit"
 		;;
 		"normal")
 			event_state="Normal"
@@ -43,39 +60,65 @@ get_event() {
 		;;
 	esac
 	json_add_string "event_state" "$event_state"
-	json_add_string "event_time_stamp" "$(bacrp $id $object_type $object_instance event-time-stamps 1 | tr -d '\r')"
-	value="$(bacrp $1 $2 $3 present-value 2>/dev/null | tr -d '\r')"
+	json_add_string "event_time_stamp" "$event_time_stamp"
+	value="$(bacrp $id $object_type $object_instance present-value 2>/dev/null | tr -d '\r')"
 	case $value in
 		active*)
 			value="$(bacrp $id $object_type $object_instance active-text | tr -d '\r')"
+			[ "$?" == "0" ] || value="active"
 			json_add_string "value" "$value"
 		;;
 		inactive*)
 			value="$(bacrp $id $object_type $object_instance inactive-text | tr -d '\r')"
+			[ "$?" == "0" ] || value="inactive"
 			json_add_string "value" "$value"
 		;;
 		*[0-9])
 			json_add_string "value" "$value"
-			json_add_string "units" "$(bacrp $id $object_type $object_instance units | tr -d '\r')"
-			json_add_string "low_limit" "$(bacrp $id $object_type $object_instance low-limit | tr -d '\r')"
-			json_add_string "high_limit" "$(bacrp $id $object_type $object_instance high-limit | tr -d '\r')"
+			units="$(bacrp $id $object_type $object_instance units | tr -d '\r')"
+			[ "$?" == "0" ] || units=""
+			json_add_string "units" "$units"
+			low_limit="$(bacrp $id $object_type $object_instance low-limit | tr -d '\r')"
+			[ "$?" == "0" ] || low_limit=""
+			json_add_string "low_limit" "$low_limit"
+			high_limit="$(bacrp $id $object_type $object_instance high-limit | tr -d '\r')"
+			[ "$?" == "0" ] || high_limit=""
+			json_add_string "high_limit" "$high_limit"
 		;;
 		*)
 			json_add_string "value" "0"
 		;;
 	esac
 	IFS=$OOIFS
+	if [ "$BACNET_MAIL" == "1" ] ; then
+		if [ ! -f /tmp/bacevent/$id-$object_type-$object_instance-$event_state_u ] ; then
+			log "msmtp $id $object_type $object_instance $event_state"
+			echo "To: $BACNET_MAIL_TO" > /tmp/mail.txt
+			echo "Cc: $BACNET_MAIL_CC" >> /tmp/mail.txt
+			echo "Bcc: $BACNET_MAIL_BCC" >> /tmp/mail.txt
+			echo "Subject: Event $object_name" >> /tmp/mail.txt
+			echo "Event $object_name $Description $value $unit $low_limit $unit - $high_limit $unit $event_state" >> /tmp/mail.txt
+			echo "$BACNET_MAIL_PW" > /tmp/mail_pw.txt
+			ping -4 -c 1 $BACNET_MAIL_SERVER >/dev/null 2>/dev/null
+			msmtp --host="$BACNET_MAIL_SERVER" --port="$BACNET_MAIL_PORT" --tls=on --auth="plain" --user="$BACNET_MAIL_USER" --password="cat /tmp/mail_pw.txt" --from="$BACNET_MAIL_FROM" --read-recipients -- "$BACNET_MAIL_TO" < /tmp/mail.txt >/dev/null 2>/dev/null
+		fi
+		touch /tmp/bacevent_tmp/$id-$object_type-$object_instance-$event_state_u
+	fi
 }
 
 get_eventlist() {
 	local id="$1"
 	local dev=""
 	support="$(bacrp $id device $id protocol-services-supported | cut -d ',' -f4)"
+	[ "$?" == "0" ] || return
 	[ "$support" == "true" ] || return
-	logger -t bacnetclient "get_eventlist $id"
+	log "get_eventlist $id"
 	dev="$(bacrp $id device $id object-name | tr -d '\r')"
+	[ "$?" == "0" ] || return
 	devdesc="$(bacrp $id device $id Description | tr -d '\r')"
+	[ "$?" == "0" ] || return
 	devloc="$(bacrp $id device $id Location | tr -d '\r')"
+	[ "$?" == "0" ] || return
 	OIFS=$IFS
 	IFS=$'\n'
 	for line in $(bacge $id|grep $id);do
@@ -90,6 +133,12 @@ get_eventlist() {
 		json_close_object
 	done
 	IFS=$OIFS
+	if [ "$BACNET_MAIL" == "1" ] ; then
+		mkdir -p /tmp/bacevent
+		mkdir -p /tmp/bacevent_tmp
+		rm -f /tmp/bacevent/$id-*
+		mv /tmp/bacevent_tmp/$id-* /tmp/bacevent/
+	fi
 }
 
 get_eventlistjson() {
@@ -97,12 +146,16 @@ get_eventlistjson() {
 	local dev=""
 	[ -f /tmp/bacnetclient.lock ] && return
 	touch /tmp/bacnetclient.lock
-	logger -t bacnetclient "get_eventlistjson $id"
+	log "get_eventlistjson $id"
 	support="$(bacrp $id device $id protocol-services-supported | cut -d ',' -f4)"
+	[ "$?" == "0" ] || return
 	[ "$support" == "true" ] || return
 	dev="$(bacrp $id device $id object-name | tr -d '\r')"
+	[ "$?" == "0" ] || return
 	devdesc="$(bacrp $id device $id Description | tr -d '\r')"
+	[ "$?" == "0" ] || return
 	devloc="$(bacrp $id device $id Location | tr -d '\r')"
+	[ "$?" == "0" ] || return
 	json_init
 	json_add_array "list"
 	OIFS=$IFS
@@ -129,10 +182,13 @@ get_eventlistjson() {
 get_devlist() {
 	local id="$1"
 	local dev=""
-	logger -t bacnetclient "get_devlist $id"
+	log "get_devlist $id"
 	dev="$(bacrp $id device $id object-name | tr -d '\r')"
+	[ "$?" == "0" ] || return
 	devdesc="$(bacrp $id device $id Description | tr -d '\r')"
+	[ "$?" == "0" ] || return
 	devloc="$(bacrp $id device $id Location | tr -d '\r')"
+	[ "$?" == "0" ] || return
 	json_add_object 0
 	json_add_string "devid" "$id"
 	json_add_string "object_name" "$dev"
@@ -146,24 +202,26 @@ get_objlist() {
 	[ -f /tmp/objlist_$id.json.get ] || return
 	[ -f /tmp/bacnetclient.lock ] && return
 	touch /tmp/bacnetclient.lock
-	status=0
-	bacrp $id device $id object-list > /tmp/obj$id.json.tmp || status=1
+	bacrp $id device $id object-list > /tmp/obj$id.json.tmp
+	status=$?
 	if [ "$status" == "0" ]; then
 		cat /tmp/obj$id.json.tmp | tr -d '\r' | sed -e 's/{/{"list": [/' -e 's/}/]}/' -e 's/(\([a-z-]*\), \([0-9]*\))/{"\1": \2}/g' > /tmp/obj$id.json
 		rm -f /tmp/obj$id.json.tmp
 	else
 		#TODO Segmentation Not Supported
 		i=1
+		bacrp $id device $id object-list $i > /tmp/obj$id.json.tmp
+		status=$?
 		echo '{"list": [' > /tmp/obj$id.json
-		bacrp $id device $id object-list $i > /tmp/obj$id.json.tmp || status=0
-		if [ "$status" == "1" ]; then
+		if [ "$status" == "0" ]; then
 			cat /tmp/obj$id.json.tmp | tr -d '\r' | sed -e 's/(\([a-z-]*\), \([0-9]*\))/{"\1": \2}/g' >> /tmp/obj$id.json
 		fi
 		rm -f /tmp/obj$id.json.tmp
-		while [ "$status" == "1" ] ; do
+		while [ "$status" == "0" ] ; do
 			i=$(( i + 1 ))
-			bacrp $id device $id object-list $i > /tmp/obj$id.json.tmp || status=0
-			if [ "$status" == "1" ]; then
+			bacrp $id device $id object-list $i > /tmp/obj$id.json.tmp
+			status=$?
+			if [ "$status" == "0" ]; then
 				echo "," >> /tmp/obj$id.json
 				cat /tmp/obj$id.json.tmp | tr -d '\r' | sed -e 's/(\([a-z-]*\), \([0-9]*\))/{"\1": \2}/g' >> /tmp/obj$id.json
 			fi
@@ -182,7 +240,9 @@ get_objlist() {
 		object_type="$(echo $object_type | tr _ -)"
 		json_get_var object_instance $object_type
 		object_name="$(bacrp $id $object_type $object_instance object-name | tr -d '\r')"
+		[ "$?" == "0" ] || object_name=""
 		Description="$(bacrp $id $object_type $object_instance Description | tr -d '\r')"
+		[ "$?" == "0" ] || Description=""
 		json_add_string "devid" "$id"
 		json_add_string "object_type" "$object_type"
 		json_add_string "object_instance" "$object_instance"
@@ -215,7 +275,7 @@ eventlist() {
 	done
 	json_cleanup
 	local idx=0
-	logger -t bacnetclient "eventlist dev $devids"
+	log "eventlist dev $devids"
 	json_init
 	json_add_array "list"
 	for devid in $devids; do
@@ -232,7 +292,7 @@ eventlistjson() {
 	[ -f /tmp/bacnetclient.lock ] && return
 	touch /tmp/bacnetclient.lock
 	local idx=0
-	logger -t bacnetclient "eventlistjson"
+	log "eventlistjson"
 	[ -f /tmp/devlist.json ] || return
 	local devids=""
 	json_init
@@ -256,16 +316,27 @@ eventlistjson() {
 devlist() {
 	[ -f /tmp/bacnetclient.lock ] && return
 	touch /tmp/bacnetclient.lock
-	logger -t bacnetclient "devlist"
-	json_init
-	json_add_array "list"
-	for devid in $(bacwi | tr -d '\r' | grep -v ';' | cut -d ' ' -f 3);do
-		get_devlist "$devid"
-	done
-	json_close_array
-	json_dump > /tmp/devlist.json.tmp
-	json_cleanup
-	mv /tmp/devlist.json.tmp /tmp/devlist.json
+	log "devlist"
+	devids="$(bacwi | tr -d '\r' | grep -v ';' | cut -d ' ' -f 3)"
+	if [ "$?" == "0" ] ; then
+		json_init
+		json_add_array "list"
+		for devid in $devids;do
+			deny=0
+			for deny_id in $BACNET_DENY_LIST ; do
+				if [ "$devid" == "$deny_id" ] ; then
+					deny=1
+				fi
+			done
+			if [ "$deny" == "0" ] ; then
+				get_devlist "$devid"
+			fi
+		done
+		json_close_array
+		json_dump > /tmp/devlist.json.tmp
+		json_cleanup
+		mv /tmp/devlist.json.tmp /tmp/devlist.json
+	fi
 	rm /tmp/bacnetclient.lock
 }
 
@@ -305,7 +376,7 @@ objlistjson() {
 		dev_idx=$(( dev_idx + 1 ))
 	done
 	json_cleanup
-	logger -s -t bacnetclient "objlistjson dev $devids"
+	log "objlistjson dev $devids"
 	for devid in $devids; do
 		get_objlist "$devid"
 	done
@@ -320,7 +391,7 @@ write_objdesc() {
 	json_get_var Description Description
 	json_cleanup
 	object_type="$(echo $object_type | tr _ -)"
-	logger -t bacnetclient "write $devid $object_type $object_instance $Description"
+	log "write $devid $object_type $object_instance $Description"
 	bacwp "$devid" "$object_type" "$object_instance" "Description" "16" "-1" "7" "$Description"
 }
 
@@ -333,7 +404,7 @@ write_objloc() {
 	json_get_var Location Location
 	json_cleanup
 	object_type="$(echo $object_type | tr _ -)"
-	logger -t bacnetclient "write $devid $object_type $object_instance $Location"
+	log "write $devid $object_type $object_instance $Location"
 	bacwp "$devid" "$object_type" "$object_instance" "Location" "16" "-1" "7" "$Location"
 }
 
@@ -351,9 +422,9 @@ write_ackalarm() {
 	event_date="$(date -d @$event_time_stamp "+%Y/%m/%d-%H:%M:%S")"
 	bacackalarm "$devid" "$process_id" "$object_type" "$object_instance" "$state" "$event_date" "openwrt" "$ack_date"
 }
+
 get_config() {
 	config_load bacnetclient
-	config_get iface default iface "lan"
 	config_get iface default iface "br-lan"
 	[ -z "$iface" ] || export BACNET_IFACE="$iface"
 	config_get port default port
@@ -365,6 +436,35 @@ get_config() {
 	[ -z "$bbmd_addr" ] || export BACNET_BBMD_ADDRESS="$bbmd_addr"
 	config_get bbmd_port default bbmd_port
 	[ -z "$bbmd_port" ] || export BACNET_BBMD_PORT="$bbmd_port"
+	export BACNET_DENY_LIST=""
+	config_get deny_list default deny_list
+	[ -z "$deny_list" ] || export BACNET_DENY_LIST="$deny_list"
+	export BACNET_DEBUG="0"
+	config_get debug default debug
+	[ -z "$debug" ] || export BACNET_DEBUG="$debug"
+	if [ -f /usr/bin/msmtp ] ; then
+		config_get mail default mail
+		[ -z "$mail" ] || export BACNET_MAIL="$mail"
+		if [ "$BACNET_MAIL" == "1" ] ; then
+			config_get mail_from default mail_from
+			[ -z "$mail_from" ] || export BACNET_MAIL_FROM="$mail_from"
+			config_get mail_to default mail_to
+			[ -z "$mail_to" ] || export BACNET_MAIL_TO="$mail_to"
+			config_get mail_cc default mail_cc
+			[ -z "$mail_cc" ] || export BACNET_MAIL_CC="$mail_cc"
+			config_get mail_bc default mail_bcc
+			[ -z "$mail_bcc" ] || export BACNET_MAIL_BCC="$mail_bcC"
+			config_get mail_server default mail_server
+			[ -z "$mail_server" ] || export BACNET_MAIL_SERVER="$mail_server"
+			config_get mail_port default mail_port
+			[ -z "$mail_port" ] || export BACNET_MAIL_PORT="$mail_port"
+			config_get mail_user default mail_user
+			[ -z "$mail_user" ] || export BACNET_MAIL_USER="$mail_user"
+			config_get mail_pw default mail_pw
+			[ -z "$mail_pw" ] || export BACNET_MAIL_PW="$mail_pw"
+		fi
+	fi
+	log "$BACNET_IFACE $BACNET_IP_PORT $BACNET_BBMD_ADDRESS $BACNET_BBMD_PORT"
 }
 
 case "$1" in
@@ -417,9 +517,9 @@ case "$1" in
 				deveventlist
 				touch /tmp/deveventlist.json.get
 			;;
-			objdesc) write_objdesc ;;
-			objloc) write_objloc ;;
-			ackevent) write_ackalarm ;;
+			objdesc) get_config && write_objdesc ;;
+			objloc) get_config && write_objloc ;;
+			ackevent) get_config && write_ackalarm ;;
 			_cron)
 				[ -f /tmp/devlist.json.get ] && get_config && devlist
 				rm -f /tmp/devlist.json.get
