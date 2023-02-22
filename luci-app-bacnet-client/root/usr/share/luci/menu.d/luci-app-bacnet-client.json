@@ -33,8 +33,23 @@
 		"title": "BACNet Client",
 		"order": 4,
 		"action": {
+			"type": "firstchild"
+		}
+	},
+	"admin/services/bacnet/client": {
+		"title": "BACNet Client",
+		"order": 1,
+		"action": {
 			"type": "view",
 			"path": "bacnetclient"
+		}
+	},
+	"admin/services/bacnet/mailtempl": {
+		"title": "BACNet Mailvorlage",
+		"order": 2,
+		"action": {
+			"type": "view",
+			"path": "mailtempl"
 		}
 	}
 }

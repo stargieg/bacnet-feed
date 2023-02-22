@@ -27,18 +27,18 @@ get_event() {
 	local id="$1"
 	local object_type="$2"
 	local object_instance="$3"
-	object_name="$(bacrp $id $object_type $object_instance object-name | tr -d '\r')"
-	[ "$?" == "0" ] || return
-	Description="$(bacrp $id $object_type $object_instance Description | tr -d '\r')"
-	[ "$?" == "0" ] || return
-	event_state="$(bacrp $id $object_type $object_instance event-state | tr -d '\r')"
-	[ "$?" == "0" ] || return
-	event_time_stamp="$(bacrp $id $object_type $object_instance event-time-stamps 1 | tr -d '\r')"
-	[ "$?" == "0" ] || return
 	json_add_string "object_instance" "$object_instance"
 	json_add_string "object_type" "$object_type"
+	object_name="$(bacrp $id $object_type $object_instance object-name | tr -d '\r')"
+	[ "$?" == "0" ] || object_name="Type$object_type""Instance$instance"
 	json_add_string "object_name" "$object_name"
+	Description="$(bacrp $id $object_type $object_instance Description | tr -d '\r')"
+	[ "$?" == "0" ] || Description="$object_name"
 	json_add_string "Description" "$Description"
+	event_state="$(bacrp $id $object_type $object_instance event-state | tr -d '\r')"
+	[ "$?" == "0" ] || event_state="invalid"
+
+	event_time_stamp_normal="0"
 	event_state_u="$event_state"
 	case $event_state in
 		"low limit")
@@ -51,6 +51,8 @@ get_event() {
 		;;
 		"normal")
 			event_state="Normal"
+			event_time_stamp_normal="$(bacrp $id $object_type $object_instance event-time-stamps 3 | tr -d '\r')"
+			[ "$?" == "0" ] || event_time_stamp_normal="0"
 		;;
 		"fault")
 			event_state="Fehler"
@@ -60,8 +62,22 @@ get_event() {
 		;;
 	esac
 	json_add_string "event_state" "$event_state"
+	json_add_string "event_time_stamp_normal" "$event_time_stamp_normal"
+
+	event_time_stamp="$(bacrp $id $object_type $object_instance event-time-stamps 1 | tr -d '\r')"
+	if [ "$?" != "0" ] ; then
+		event_time_stamp="$(bacrp $id $object_type $object_instance event-time-stamps -1 | tr -d '\r'| tr -d '{}' | cut -d ',' -f 1)"
+		if [ "$?" != "0" ] ; then
+			event_time_stamp=0
+		fi
+	fi
 	json_add_string "event_time_stamp" "$event_time_stamp"
+
 	value="$(bacrp $id $object_type $object_instance present-value 2>/dev/null | tr -d '\r')"
+	[ "$?" == "0" ] || value="invalid"
+	unit=""
+	low_limit=""
+	high_limit=""
 	case $value in
 		active*)
 			value="$(bacrp $id $object_type $object_instance active-text | tr -d '\r')"
@@ -91,17 +107,23 @@ get_event() {
 	esac
 	IFS=$OOIFS
 	if [ "$BACNET_MAIL" == "1" ] ; then
+		log "msmtp $dev $id $object_type $object_instance $event_state"
 		if [ ! -f /tmp/bacevent/$id-$object_type-$object_instance-$event_state_u ] ; then
 			log "msmtp $id $object_type $object_instance $event_state"
 			echo "To: $BACNET_MAIL_TO" > /tmp/mail.txt
 			echo "Cc: $BACNET_MAIL_CC" >> /tmp/mail.txt
 			echo "Bcc: $BACNET_MAIL_BCC" >> /tmp/mail.txt
-			echo "Subject: Event $object_name" >> /tmp/mail.txt
-			echo "Event $object_name $Description $value $unit $low_limit $unit - $high_limit $unit $event_state" >> /tmp/mail.txt
+			#echo "Subject: Event $object_name" >> /tmp/mail.txt
+			#echo "Event $object_name $Description $value $unit $low_limit $unit - $high_limit $unit $event_state" >> /tmp/mail.txt
+			cat /etc/bacalarmtemplate.txt | sed -e "s/#event_state#/$event_state/"\
+			 -e "s/#dev#/$dev/"  -e "s/#object_name#/$object_name/"  -e "s/#Description#/$Description/" \
+			 -e "s/#value#/$value $unit   $low_limit $unit - $high_limit $unit/"  -e "s/#devdesc#/$devdesc/"  -e "s/#devloc#/$devloc/" \
+			 -e "s/#event_time_stamp#/$event_time_stamp/" >> /tmp/mail.txt
 			echo "$BACNET_MAIL_PW" > /tmp/mail_pw.txt
 			ping -4 -c 1 $BACNET_MAIL_SERVER >/dev/null 2>/dev/null
-			msmtp --host="$BACNET_MAIL_SERVER" --port="$BACNET_MAIL_PORT" --tls=on --auth="plain" --user="$BACNET_MAIL_USER" --password="cat /tmp/mail_pw.txt" --from="$BACNET_MAIL_FROM" --read-recipients -- "$BACNET_MAIL_TO" < /tmp/mail.txt >/dev/null 2>/dev/null
+			/usr/bin/msmtp --host="$BACNET_MAIL_SERVER" --port="$BACNET_MAIL_PORT" --tls="on" --auth="plain" --user="$BACNET_MAIL_USER" --password="cat /tmp/mail_pw.txt" --from="$BACNET_MAIL_FROM" --read-recipients --syslog="on" -- "$BACNET_MAIL_TO" < /tmp/mail.txt >/dev/null 2&>1
 		fi
+		log "msmtp touch /tmp/bacevent_tmp/$id-$object_type-$object_instance-$event_state_u"
 		touch /tmp/bacevent_tmp/$id-$object_type-$object_instance-$event_state_u
 	fi
 }
@@ -134,8 +156,6 @@ get_eventlist() {
 	done
 	IFS=$OIFS
 	if [ "$BACNET_MAIL" == "1" ] ; then
-		mkdir -p /tmp/bacevent
-		mkdir -p /tmp/bacevent_tmp
 		rm -f /tmp/bacevent/$id-*
 		mv /tmp/bacevent_tmp/$id-* /tmp/bacevent/
 	fi
@@ -415,11 +435,12 @@ write_ackalarm() {
 	json_get_var object_type object_type
 	json_get_var object_instance object_instance
 	json_get_var event_time_stamp event_time_stamp
+	json_get_var state state
 	process_id=10
-	state="offnormal"
 	ack_date="$(date +%Y/%m/%d-%H:%M:%S)"
 	event_time_stamp=$(($event_time_stamp/1000))
 	event_date="$(date -d @$event_time_stamp "+%Y/%m/%d-%H:%M:%S")"
+	log "bacackalarm $devid $process_id $object_type $object_instance $state $event_date openwrt $ack_date"
 	bacackalarm "$devid" "$process_id" "$object_type" "$object_instance" "$state" "$event_date" "openwrt" "$ack_date"
 }
 
@@ -462,6 +483,8 @@ get_config() {
 			[ -z "$mail_user" ] || export BACNET_MAIL_USER="$mail_user"
 			config_get mail_pw default mail_pw
 			[ -z "$mail_pw" ] || export BACNET_MAIL_PW="$mail_pw"
+			mkdir -p /tmp/bacevent
+			mkdir -p /tmp/bacevent_tmp
 		fi
 	fi
 	log "$BACNET_IFACE $BACNET_IP_PORT $BACNET_BBMD_ADDRESS $BACNET_BBMD_PORT"

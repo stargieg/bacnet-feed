@@ -2,7 +2,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-bacnet-client
 PKG_VERSION:=0.2.4
-PKG_RELEASE:=6
+PKG_RELEASE:=7
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
 
 include $(INCLUDE_DIR)/package.mk
@@ -12,7 +12,7 @@ define Package/luci-app-bacnet-client
   CATEGORY:=LuCI
   SUBMENU:=3. Applications
   TITLE:=Bacnet Device
-  EXTRA_DEPENDS:=luci-mod-admin-full, msmtp
+  EXTRA_DEPENDS:=luci-mod-admin-full, msmtp, luci-app-statistics, collectd-mod-exec
 endef
 
 define Build/Prepare
@@ -37,11 +37,12 @@ if [ -z $${IPKG_INSTROOT} ] ; then
 	grep -q "eventlist.json.get" /etc/crontabs/root || echo "*/5 * *  *  * touch /tmp/eventlist.json.get" >> /etc/crontabs/root
 	grep -q "rsync -a -d /tmp/rrd /etc/luci-uploads/" /etc/crontabs/root || echo "21 */1 *  *  * rsync -a -d /tmp/rrd /etc/luci-uploads/" >> /etc/crontabs/root
 	/etc/init.d/cron restart
-	if [ ! grep -q collectd-exec-bacnet.sh /etc/config/luci_statistics ] ; then
+	if ! grep -q collectd-exec-bacnet.sh /etc/config/luci_statistics ; then
 		uci set luci_statistics.bacnet='collectd_exec_input'
-		uci set luci_statistics.bacnet.cmdline='/etc/collectd-exec-bacnet1.sh'
+		uci set luci_statistics.bacnet.cmdline='/etc/collectd-exec-bacnet.sh'
 		uci set luci_statistics.bacnet.cmduser='nobody'
 		uci set luci_statistics.bacnet.cmdgroup='nogroup'
+		uci set luci_statistics.bacnet.enable='0'
 		uci commit luci_statistics
 	fi
 fi
@@ -50,7 +51,8 @@ endef
 define Package/luci-app-bacnet-client/install
 	$(INSTALL_DIR) $(1)/etc/config
 	$(INSTALL_CONF) ./root/etc/config/bacnetclient $(1)/etc/config/bacnetclient
-	$(INSTALL_BIN) ./root/etc/collectd-exec-bacnet.sh $(1)/etc
+	$(INSTALL_CONF) ./root/etc/bacalarmtemplate.txt $(1)/etc/
+	$(INSTALL_BIN) ./root/etc/collectd-exec-bacnet.sh $(1)/etc/
 	$(INSTALL_DIR) $(1)/www/luci-static/resources/view
 	$(INSTALL_DATA) ./htdocs/luci-static/resources/view/* $(1)/www/luci-static/resources/view
 	$(INSTALL_DIR) $(1)/www/luci-static/resources/statistics/rrdtool/definitions

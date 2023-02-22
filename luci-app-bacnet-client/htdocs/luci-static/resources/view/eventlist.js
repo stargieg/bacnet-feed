@@ -12,26 +12,40 @@ var callgetData = rpc.declare({
 var callsetData = rpc.declare({
 	object: 'bacnetclient',
 	method: 'ackevent',
-	params: [ 'devid', 'object_type', 'object_instance', 'event_time_stamp' ]
+	params: [ 'devid', 'object_type', 'object_instance', 'event_time_stamp', 'state' ]
 });
 
 function createTable(data) {
     let tableData = [];
     data.list.forEach(row => {
-		let event_time_stamp = Date.parse(row.event_time_stamp);
-		let event_time_stamp_loc = new Date(event_time_stamp);
+		let event_time_stamp_date = Date.parse(row.event_time_stamp);
+		let event_time_stamp_loc = new Date(event_time_stamp_date);
+		let event_time_stamp = event_time_stamp_loc.toLocaleDateString('de-DE') + ' ' + event_time_stamp_loc.toLocaleTimeString('de-DE')
+		let event_time_stamp_normal_date = Date.parse(row.event_time_stamp_normal);
+		let event_time_stamp_normal_loc = new Date(event_time_stamp_normal_date);
+		let event_time_stamp_normal = event_time_stamp_normal_loc.toLocaleDateString('de-DE') + ' ' + event_time_stamp_normal_loc.toLocaleTimeString('de-DE')
+
 		let ack =
 			E('span', { 'class': 'control-group' }, [
 				E('button', {
 					'class': 'cbi-button cbi-button-apply',
 					'click': ui.createHandlerFn(this, function() {
-						return callsetData(row.devid,row.object_type,row.object_instance,event_time_stamp);
+						return callsetData(row.devid,row.object_type,row.object_instance,event_time_stamp_date,'offnormal');
+					})
+				}, 
+				_('Quit')),
+			]);
+		let ack_normal =
+			E('span', { 'class': 'control-group' }, [
+				E('button', {
+					'class': 'cbi-button cbi-button-apply',
+					'click': ui.createHandlerFn(this, function() {
+						return callsetData(row.devid,row.object_type,row.object_instance,event_time_stamp_normal_date,'normal');
 					})
 				}, 
 				_('Quit')),
 			]);
 		tableData.push([
-			ack,
             row.idx,
             row.devid,
             row.devname,
@@ -41,9 +55,10 @@ function createTable(data) {
             row.Description,
 			row.event_state,
 			row.value,
-			//event_time_stamp
-			event_time_stamp_loc.toLocaleDateString('de-DE'),
-			event_time_stamp_loc.toLocaleTimeString('de-DE')
+			event_time_stamp,
+			ack,
+			event_time_stamp_normal,
+			ack_normal
         ])
     });
     return tableData;
@@ -60,7 +75,6 @@ return view.extend({
 
 		var tr = E('table', { 'class': 'table' });
 		tr.appendChild(E('tr', { 'class': 'tr cbi-section-table-titles' }, [
-			E('th', { 'class': 'th left' }, [ 'Quit' ]),
 			E('th', { 'class': 'th left' }, [ 'Index' ]),
 			E('th', { 'class': 'th left' }, [ 'Dev ID' ]),
 			E('th', { 'class': 'th left' }, [ 'Dev Name' ]),
@@ -70,8 +84,10 @@ return view.extend({
 			E('th', { 'class': 'th left' }, [ 'Beschreibung' ]),
 			E('th', { 'class': 'th left' }, [ 'Ereignis Status' ]),
 			E('th', { 'class': 'th left' }, [ 'Wert' ]),
-			E('th', { 'class': 'th left' }, [ 'Datum' ]),
-			E('th', { 'class': 'th left' }, [ 'Uhrzeit' ])
+			E('th', { 'class': 'th left' }, [ 'Alarm Datum Uhrzeit' ]),
+			E('th', { 'class': 'th left' }, [ 'Quit' ]),
+			E('th', { 'class': 'th left' }, [ 'Normal Datum Uhrzeit' ]),
+			E('th', { 'class': 'th left' }, [ 'Quit' ])
 		]));
         poll.add(() => {
             Promise.all([

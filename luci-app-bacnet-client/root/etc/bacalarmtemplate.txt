@@ -1,0 +1,16 @@
+Subject: #event_state# #dev# #object_name# #Description#
+#event_state#!
+
+Name: #dev# #object_name#
+Art: #Description#
+Wert: #value#
+Anlage: #devdesc#
+Ort: #devloc#
+Zeit: #event_time_stamp#
+Maßnahme: Kontrolle
+Zuständig: Fa. Grikon, Tel.: 0170 ...
+
+
+Diese Mail wurde automatisch erstellt.
+
+Ihr Facilitymanagement

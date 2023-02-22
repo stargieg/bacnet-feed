@@ -2,12 +2,18 @@
 	"luci-app-bacnetclient": {
 		"description": "Grant UCI access for luci-app-bacnetclient",
 		"read": {
+			"file": {
+				"/etc/bacalarmtemplate.txt": [ "read" ]
+			},
 			"uci": [ "bacnetclient" ],
 			"ubus": {
 				"bacnetclient": [ "eventlist", "devlist", "objlist", "objdesc", "objloc", "ackevent" ]
 			}
 		},
 		"write": {
+			"file": {
+				"/etc/bacalarmtemplate.txt": [ "write" ]
+			},
 			"uci": [ "bacnetclient" ],
 			"ubus": {
 				"bacnetclient": [ "objdesc", "objloc", "ackevent" ]
