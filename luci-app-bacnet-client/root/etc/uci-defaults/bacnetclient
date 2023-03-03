@@ -1,0 +1,20 @@
+#!/bin/sh
+
+chmod 644 /etc/config/bacnetclient
+grep -q "bacnetclient call _cron" /etc/crontabs/root || echo "* * *  *  * /usr/libexec/rpcd/bacnetclient call _cron" >> /etc/crontabs/root
+grep -q "eventlist.json.get" /etc/crontabs/root || echo "*/5 * *  *  * touch /tmp/eventlist.json.get" >> /etc/crontabs/root
+grep -q "rsync -a -d /tmp/rrd /etc/luci-uploads/" /etc/crontabs/root || echo "21 */1 *  *  * rsync -a -d /tmp/rrd /etc/luci-uploads/" >> /etc/crontabs/root
+if ! grep -q collectd-exec-bacnet.sh /etc/config/luci_statistics ; then
+	uci set luci_statistics.bacnet='collectd_exec_input'
+	uci set luci_statistics.bacnet.cmdline='/etc/collectd-exec-bacnet.sh'
+	uci set luci_statistics.bacnet.cmduser='nobody'
+	uci set luci_statistics.bacnet.cmdgroup='nogroup'
+	uci set luci_statistics.bacnet.enable='1'
+	uci commit luci_statistics
+fi
+
+if ! grep -q "rsync -a /etc/luci-uploads/rrd /tmp/" /etc/rc.local ; then
+	echo "rsync -a /etc/luci-uploads/rrd /tmp/" > /tmp/rc.local
+	cat /etc/rc.local >> /tmp/rc.local
+	mv /tmp/rc.local /etc/rc.local
+fi

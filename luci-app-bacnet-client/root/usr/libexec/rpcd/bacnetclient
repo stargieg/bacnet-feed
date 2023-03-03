@@ -478,7 +478,8 @@ get_config() {
 			config_get mail_server default mail_server
 			[ -z "$mail_server" ] || export BACNET_MAIL_SERVER="$mail_server"
 			config_get mail_port default mail_port
-			[ -z "$mail_port" ] || export BACNET_MAIL_PORT="$mail_port"
+			[ -z "$mail_port" ] && mail_port=587
+			export BACNET_MAIL_PORT="$mail_port"
 			config_get mail_user default mail_user
 			[ -z "$mail_user" ] || export BACNET_MAIL_USER="$mail_user"
 			config_get mail_pw default mail_pw

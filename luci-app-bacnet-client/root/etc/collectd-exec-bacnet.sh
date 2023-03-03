@@ -39,9 +39,9 @@ get_config() {
 	export BACNET_DEBUG="0"
 	config_get debug default debug
 	[ -z "$debug" ] || export BACNET_DEBUG="$debug"
-	export BACNET_INTERVAL="900"
 	config_get interval default interval
-	[ -z "$interval" ] || export BACNET_INTERVAL="$interval"
+	[ -z "$interval" ] && interval=900
+	export BACNET_INTERVAL="$interval"
 	log "$BACNET_IFACE $BACNET_IP_PORT $BACNET_BBMD_ADDRESS $BACNET_BBMD_PORT $BACNET_INTERVAL"
 }
 
@@ -215,18 +215,22 @@ while true; do
 							json_select $i
 							json_get_var time 1
 							json_get_var timeval 2
-							case $ref_object_type in
-								binary*)
-									if [ "$timeval" == "active" ] ; then
-										timeval=1
-									else
-										timeval=0
-									fi
-									;;
-							esac
-							utime=$(date -d "$time" -D "%Y-%m-%dT%H:%M:%S" +"%s")
-							log "PUTVAL $dev_name/$collectd_plugin-$plugin_id/$collectd_types interval=$INTERVAL $utime:$timeval"
-							echo "PUTVAL $dev_name/$collectd_plugin-$plugin_id/$collectd_types interval=$INTERVAL $utime:$timeval"
+							if [ "$timeval" == "Null" ] ; then
+								log "Null $dev_name/$collectd_plugin-$plugin_id/$collectd_types"
+							else
+								case $ref_object_type in
+									binary*)
+										if [ "$timeval" == "active" ] ; then
+											timeval=1
+										else
+											timeval=0
+										fi
+										;;
+								esac
+								utime=$(date -d "$time" -D "%Y-%m-%dT%H:%M:%S" +"%s")
+								log "PUTVAL $dev_name/$collectd_plugin-$plugin_id/$collectd_types interval=$INTERVAL $utime:$timeval"
+								echo "PUTVAL $dev_name/$collectd_plugin-$plugin_id/$collectd_types interval=$INTERVAL $utime:$timeval"
+							fi
 							i=$(( i + 1 ))
 							json_select ..
 					done
