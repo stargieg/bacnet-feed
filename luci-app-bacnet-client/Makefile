@@ -42,6 +42,7 @@ define Package/luci-app-bacnet-client/install
 	$(INSTALL_DIR) $(1)/etc/config
 	$(INSTALL_CONF) ./root/etc/config/bacnetclient $(1)/etc/config/bacnetclient
 	$(INSTALL_CONF) ./root/etc/bacalarmtemplate.txt $(1)/etc/
+	$(INSTALL_DIR) $(1)/etc/uci-defaults
 	$(INSTALL_DATA) ./root/etc/uci-defaults/bacnetclient $(1)/etc/uci-defaults/
 	$(INSTALL_BIN) ./root/etc/collectd-exec-bacnet.sh $(1)/etc/
 	$(INSTALL_DIR) $(1)/www/luci-static/resources/view
