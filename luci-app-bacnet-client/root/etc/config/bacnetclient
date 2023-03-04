@@ -1,5 +1,5 @@
 config dev default
 	option port '47808'
-	option iface 'lan'
+	option iface 'br-lan'
 	option bacdl 'bip'
 	option enable '1'
