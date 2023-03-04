@@ -141,7 +141,7 @@ while true; do
 			[ "$?" == "0" ] || continue
 			Description="$(bacrp $ref_devid $ref_object_type $ref_object_instance Description | tr -d '\r' | tr -s ' ' '_'| sed 's/\ä/ae/g;s/\Ä/Ae/g;s/\ö/oe/g;s/\Ö/Oe/g;s/\ü/ue/g;s/\Ü/Ue/g;s/\ß/ss/g')"
 			[ "$?" == "0" ] || continue
-			[ "$Description" == "" ] || Description="NoDescription"
+			[ "$Description" == "" ] && Description="NoDescription"
 			ret=0
 			case $ref_object_type in
 				analog*)
