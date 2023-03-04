@@ -42,7 +42,10 @@ get_config() {
 	config_get interval default interval
 	[ -z "$interval" ] && interval=900
 	export BACNET_INTERVAL="$interval"
-	log "$BACNET_IFACE $BACNET_IP_PORT $BACNET_BBMD_ADDRESS $BACNET_BBMD_PORT $BACNET_INTERVAL"
+	DataDir="$(uci get luci_statistics.collectd_rrdtool.DataDir)"
+	[ -z "$DataDir" ] && DataDir="/tmp/rrd"
+	export RRD_DATADIR="$DataDir"
+	log "$BACNET_IFACE $BACNET_IP_PORT $BACNET_BBMD_ADDRESS $BACNET_BBMD_PORT $BACNET_INTERVAL $RRD_DATADIR"
 }
 
 while true; do
@@ -138,6 +141,7 @@ while true; do
 			[ "$?" == "0" ] || continue
 			Description="$(bacrp $ref_devid $ref_object_type $ref_object_instance Description | tr -d '\r' | tr -s ' ' '_'| sed 's/\ä/ae/g;s/\Ä/Ae/g;s/\ö/oe/g;s/\Ö/Oe/g;s/\ü/ue/g;s/\Ü/Ue/g;s/\ß/ss/g')"
 			[ "$?" == "0" ] || continue
+			[ "$Description" == "" ] || Description="NoDescription"
 			ret=0
 			case $ref_object_type in
 				analog*)
@@ -190,14 +194,14 @@ while true; do
 			srange=1
 			new=0
 			plugin_id="$object_name"":""$Description"
-			[ -f "/tmp/rrd/$dev_name/$collectd_plugin-$plugin_id/$collectd_types.rrd" ] || new="1"
+			[ -f "$RRD_DATADIR/$dev_name/$collectd_plugin-$plugin_id/$collectd_types.rrd" ] || new="1"
 			while [ $count -ge $drange ] ; do
 				status=0
 				if [ "$new" == "1" ] ; then
 					log "bacrr $devid trend-log $obj_id log-buffer 1 $srange $range"
 					bacrr $devid trend-log $obj_id log-buffer 1 $srange $range > /tmp/bactrt.json 2>/dev/null || status=1
 				else
-					epoche=$(rrdtool last "/tmp/rrd/$dev_name/$collectd_plugin-$plugin_id/$collectd_types.rrd")
+					epoche=$(rrdtool last "$RRD_DATADIR/$dev_name/$collectd_plugin-$plugin_id/$collectd_types.rrd")
 					date_slot=$(date -d "@$epoche" "+%Y/%m/%d")
 					time_slot=$(date -d "@$epoche" "+%H:%M:%S")
 					log "bacrr $devid trend-log $obj_id log-buffer 3 $date_slot $time_slot 60"
