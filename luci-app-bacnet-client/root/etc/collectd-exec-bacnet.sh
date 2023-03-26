@@ -129,6 +129,10 @@ while true; do
 			interval_offset="$BACNET_INTERVAL"
 			continue
 		fi
+		dev_name="$(bacrp $devid device $devid object-name | tr -d '\r' | tr -s ' ' '_' | sed 's/\ä/ae/g;s/\Ä/Ae/g;s/\ö/oe/g;s/\Ö/Oe/g;s/\ü/ue/g;s/\Ü/Ue/g;s/\ß/ss/g')"
+		[ "$?" == "0" ] || continue
+		[ -z "$dev_name" ] && continue
+
 		config_load bacnetclient
 		config_get delimeter_name "$devid" delimeter_name
 		[ -z "$delimeter_name" ] && delimeter_name="$BACNET_DELIMETER_NAME"
@@ -147,7 +151,7 @@ while true; do
 			ref="$(bacrp $devid trend-log $obj_id 132 | tr -d '\r')"
 			[ "$?" == "0" ] || continue
 			j=1
-			ref_devid="$devid"
+			ref_devid=""
 			for opt in $ref ; do
 				case $j in
 				1) [ "$opt" == "-1" ] || ref_devid="$opt" ;;
@@ -157,10 +161,16 @@ while true; do
 				esac
 				j=$(( j + 1 ))
 			done
-			dev_name="$(bacrp $ref_devid device $ref_devid object-name | tr -d '\r' | tr -s ' ' '_' | sed 's/\ä/ae/g;s/\Ä/Ae/g;s/\ö/oe/g;s/\Ö/Oe/g;s/\ü/ue/g;s/\Ü/Ue/g;s/\ß/ss/g')"
-			[ "$?" == "0" ] || continue
+			if [ -z "$ref_devid" ] ; then
+				ref_devid="$devid"
+			else
+				dev_name="$(bacrp $ref_devid device $ref_devid object-name | tr -d '\r' | tr -s ' ' '_' | sed 's/\ä/ae/g;s/\Ä/Ae/g;s/\ö/oe/g;s/\Ö/Oe/g;s/\ü/ue/g;s/\Ü/Ue/g;s/\ß/ss/g')"
+				[ "$?" == "0" ] || continue
+				[ -z "$dev_name" ] && continue
+			fi
 			object_name="$(bacrp $ref_devid $ref_object_type $ref_object_instance object-name | tr -d '\r' | tr -s ' ' '_' | sed 's/\ä/ae/g;s/\Ä/Ae/g;s/\ö/oe/g;s/\Ö/Oe/g;s/\ü/ue/g;s/\Ü/Ue/g;s/\ß/ss/g')"
 			[ "$?" == "0" ] || continue
+			[ -z "$object_name" ] && continue
 			Description="$(bacrp $ref_devid $ref_object_type $ref_object_instance Description | tr -d '\r' | tr -s ' ' '_'| sed 's/\ä/ae/g;s/\Ä/Ae/g;s/\ö/oe/g;s/\Ö/Oe/g;s/\ü/ue/g;s/\Ü/Ue/g;s/\ß/ss/g')"
 			[ "$?" == "0" ] || continue
 			ret=0
