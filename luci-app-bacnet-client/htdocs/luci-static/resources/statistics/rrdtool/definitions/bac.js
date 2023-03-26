@@ -121,7 +121,6 @@ return baseclass.extend({
 			}
 		};
 		var types = graph.dataTypes(host, plugin, plugin_instance);
-		console.log(host, plugin, plugin_instance, types);
 		for (var i = 0; i < types.length; i++)
 			if (types[i] == 'bool')
 				p.push(binary);
