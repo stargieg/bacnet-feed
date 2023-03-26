@@ -131,13 +131,13 @@ while true; do
 		fi
 		config_load bacnetclient
 		config_get delimeter_name "$devid" delimeter_name
-		[ -z "$delimeter_name" ] || BACNET_DELIMETER_NAME="$delimeter_name"
+		[ -z "$delimeter_name" ] && delimeter_name="$BACNET_DELIMETER_NAME"
 		config_get delimeter_desc "$devid" delimeter_desc
-		[ -z "$delimeter_desc" ] || BACNET_DELIMETER_DESC="$delimeter_desc"
+		[ -z "$delimeter_desc" ] && delimeter_desc="$BACNET_DELIMETER_DESC"
 		config_get delimeter_group_name_count "$devid" delimeter_group_name_count
-		[ -z "$delimeter_group_name_count" ] || BACNET_DELIMETER_GROUP_NAME_COUNT="$delimeter_group_name_count"
+		[ -z "$delimeter_group_name_count" ] && delimeter_group_name_count="$BACNET_DELIMETER_GROUP_NAME_COUNT"
 		config_get delimeter_group_desc_count "$devid" delimeter_group_desc_count
-		[ -z "$delimeter_group_desc_count" ] || BACNET_DELIMETER_GROUP_DESC_COUNT="$delimeter_group_desc_count"
+		[ -z "$delimeter_group_desc_count" ] && delimeter_group_desc_count="$BACNET_DELIMETER_GROUP_DESC_COUNT"
 
 		for obj_id in $objs ; do
 			log "bacrp $devid trend-log $obj_id 141"
@@ -163,7 +163,6 @@ while true; do
 			[ "$?" == "0" ] || continue
 			Description="$(bacrp $ref_devid $ref_object_type $ref_object_instance Description | tr -d '\r' | tr -s ' ' '_'| sed 's/\ä/ae/g;s/\Ä/Ae/g;s/\ö/oe/g;s/\Ö/Oe/g;s/\ü/ue/g;s/\Ü/Ue/g;s/\ß/ss/g')"
 			[ "$?" == "0" ] || continue
-			[ "$Description" == "" ] && Description="NoDescription"
 			ret=0
 			case $ref_object_type in
 				analog*)
@@ -219,23 +218,26 @@ while true; do
 			drange=$range
 			srange=1
 			new=0
-			del="$BACNET_DELIMETER_NAME"
-			delc="$BACNET_DELIMETER_GROUP_NAME_COUNT"
+			del="$delimeter_name"
+			delc="$delimeter_group_name_count"
 			plugin_instance_name=$(echo $object_name | cut -d "$del" -f -$delc)
 			delc=$((delc + 1))
 			plugin_id_name=$(echo $object_name | cut -d "$del" -f $delc-)
-			del="$BACNET_DELIMETER_DESC"
-			delc="$BACNET_DELIMETER_GROUP_DESC_COUNT"
-			plugin_instance_description=$(echo $Description | cut -d "$del" -f -$delc)
-			delc=$((delc + 1))
-			plugin_id_description=$(echo $Description | cut -d "$del" -f $delc-)
-			del="$BACNET_DELIMETER_DESC"
-			plugin_instance="$plugin_instance_name""$del""$plugin_instance_description"
-			del="$BACNET_DELIMETER_NAME"
-			plugin_id="$plugin_id_name""$del""$plugin_id_description"
-#			plugin_id="$object_name"":""$Description"
-			[ -f "$RRD_DATADIR/$dev_name/$collectd_plugin-$plugin_instance/$collectd_types-$plugin_id.rrd" ] || new="1"
-#			[ -f "$RRD_DATADIR/$dev_name/$collectd_plugin-$plugin_id/$collectd_types.rrd" ] || new="1"
+			if [ "$Description" == "" ] ; then
+				plugin_instance="$plugin_instance_name"
+				plugin_id="$plugin_id_name"
+			else
+				del="$delimeter_desc"
+				delc="$delimeter_group_desc_count"
+				plugin_instance_description=$(echo $Description | cut -d "$del" -f -$delc)
+				delc=$((delc + 1))
+				plugin_id_description=$(echo $Description | cut -d "$del" -f $delc-)
+				del="$delimeter_desc"
+				plugin_instance="$plugin_instance_name""$del""$plugin_instance_description"
+				del="$delimeter_name"
+				plugin_id="$plugin_id_name""$del""$plugin_id_description"
+			fi
+			[ -f "$RRD_DATADIR/$dev_name/bac-$plugin_instance/$collectd_types-$plugin_id.rrd" ] || new="1"
 			while [ $count -ge $drange ] ; do
 				status=0
 				if [ "$new" == "1" ] ; then
@@ -243,7 +245,6 @@ while true; do
 					bacrr $devid trend-log $obj_id log-buffer 1 $srange $range > /tmp/bactrt.json 2>/dev/null || status=1
 				else
 					epoche=$(rrdtool last "$RRD_DATADIR/$dev_name/bac-$plugin_instance/$collectd_types-$plugin_id.rrd")
-#					epoche=$(rrdtool last "$RRD_DATADIR/$dev_name/$collectd_plugin-$plugin_id/$collectd_types.rrd")
 					date_slot=$(date -d "@$epoche" "+%Y/%m/%d")
 					time_slot=$(date -d "@$epoche" "+%H:%M:%S")
 					log "bacrr $devid trend-log $obj_id log-buffer 3 $date_slot $time_slot 60"
@@ -263,7 +264,6 @@ while true; do
 							json_get_var timeval 2
 							if [ "$timeval" == "Null" ] ; then
 								log "Null $dev_name/bac-$plugin_instance/$collectd_types-$plugin_id"
-#								log "Null $dev_name/$collectd_plugin-$plugin_id/$collectd_types"
 							else
 								case $ref_object_type in
 									binary*)
@@ -277,8 +277,6 @@ while true; do
 								utime=$(date -d "$time" -D "%Y-%m-%dT%H:%M:%S" +"%s")
 								log "PUTVAL $dev_name/bac-$plugin_instance/$collectd_types-$plugin_id interval=$INTERVAL $utime:$timeval"
 								echo "PUTVAL $dev_name/bac-$plugin_instance/$collectd_types-$plugin_id interval=$INTERVAL $utime:$timeval"
-#								log "PUTVAL $dev_name/$collectd_plugin-$plugin_id/$collectd_types interval=$INTERVAL $utime:$timeval"
-#								echo "PUTVAL $dev_name/$collectd_plugin-$plugin_id/$collectd_types interval=$INTERVAL $utime:$timeval"
 							fi
 							i=$(( i + 1 ))
 							json_select ..
