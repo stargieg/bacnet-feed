@@ -42,6 +42,18 @@ get_config() {
 	config_get interval default interval
 	[ -z "$interval" ] && interval=900
 	export BACNET_INTERVAL="$interval"
+	config_get delimeter_name default delimeter_name
+	[ -z "$delimeter_name" ] && delimeter_name=":"
+	export BACNET_DELIMETER_NAME="$delimeter_name"
+	config_get delimeter_desc default delimeter_desc
+	[ -z "$delimeter_desc" ] && delimeter_desc="_"
+	export BACNET_DELIMETER_DESC="$delimeter_desc"
+	config_get delimeter_group_name_count default delimeter_group_name_count
+	[ -z "$delimeter_group_name_count" ] && delimeter_group_name_count=1
+	export BACNET_DELIMETER_GROUP_NAME_COUNT="$delimeter_group_name_count"
+	config_get delimeter_group_desc_count default delimeter_group_desc_count
+	[ -z "$delimeter_group_desc_count" ] && delimeter_group_desc_count=2
+	export BACNET_DELIMETER_GROUP_DESC_COUNT="$delimeter_group_desc_count"
 	DataDir="$(uci get luci_statistics.collectd_rrdtool.DataDir)"
 	[ -z "$DataDir" ] && DataDir="/tmp/rrd"
 	export RRD_DATADIR="$DataDir"
@@ -117,6 +129,16 @@ while true; do
 			interval_offset="$BACNET_INTERVAL"
 			continue
 		fi
+		config_load bacnetclient
+		config_get delimeter_name "$devid" delimeter_name
+		[ -z "$delimeter_name" ] || BACNET_DELIMETER_NAME="$delimeter_name"
+		config_get delimeter_desc "$devid" delimeter_desc
+		[ -z "$delimeter_desc" ] || BACNET_DELIMETER_DESC="$delimeter_desc"
+		config_get delimeter_group_name_count "$devid" delimeter_group_name_count
+		[ -z "$delimeter_group_name_count" ] || BACNET_DELIMETER_GROUP_NAME_COUNT="$delimeter_group_name_count"
+		config_get delimeter_group_desc_count "$devid" delimeter_group_desc_count
+		[ -z "$delimeter_group_desc_count" ] || BACNET_DELIMETER_GROUP_DESC_COUNT="$delimeter_group_desc_count"
+
 		for obj_id in $objs ; do
 			log "bacrp $devid trend-log $obj_id 141"
 			count="$(bacrp $devid trend-log $obj_id 141 | tr -d '\r')"
@@ -177,6 +199,10 @@ while true; do
 					collectd_plugin="thermal"
 					collectd_types="temperature"
 				;;
+				pascals)
+					collectd_plugin="pascals"
+					collectd_types="pressure"
+				;;
 				percent)
 					collectd_plugin="control"
 					collectd_types="percent"
@@ -193,15 +219,31 @@ while true; do
 			drange=$range
 			srange=1
 			new=0
-			plugin_id="$object_name"":""$Description"
-			[ -f "$RRD_DATADIR/$dev_name/$collectd_plugin-$plugin_id/$collectd_types.rrd" ] || new="1"
+			del="$BACNET_DELIMETER_NAME"
+			delc="$BACNET_DELIMETER_GROUP_NAME_COUNT"
+			plugin_instance_name=$(echo $object_name | cut -d "$del" -f -$delc)
+			delc=$((delc + 1))
+			plugin_id_name=$(echo $object_name | cut -d "$del" -f $delc-)
+			del="$BACNET_DELIMETER_DESC"
+			delc="$BACNET_DELIMETER_GROUP_DESC_COUNT"
+			plugin_instance_description=$(echo $Description | cut -d "$del" -f -$delc)
+			delc=$((delc + 1))
+			plugin_id_description=$(echo $Description | cut -d "$del" -f $delc-)
+			del="$BACNET_DELIMETER_DESC"
+			plugin_instance="$plugin_instance_name""$del""$plugin_instance_description"
+			del="$BACNET_DELIMETER_NAME"
+			plugin_id="$plugin_id_name""$del""$plugin_id_description"
+#			plugin_id="$object_name"":""$Description"
+			[ -f "$RRD_DATADIR/$dev_name/$collectd_plugin-$plugin_instance/$collectd_types-$plugin_id.rrd" ] || new="1"
+#			[ -f "$RRD_DATADIR/$dev_name/$collectd_plugin-$plugin_id/$collectd_types.rrd" ] || new="1"
 			while [ $count -ge $drange ] ; do
 				status=0
 				if [ "$new" == "1" ] ; then
 					log "bacrr $devid trend-log $obj_id log-buffer 1 $srange $range"
 					bacrr $devid trend-log $obj_id log-buffer 1 $srange $range > /tmp/bactrt.json 2>/dev/null || status=1
 				else
-					epoche=$(rrdtool last "$RRD_DATADIR/$dev_name/$collectd_plugin-$plugin_id/$collectd_types.rrd")
+					epoche=$(rrdtool last "$RRD_DATADIR/$dev_name/bac-$plugin_instance/$collectd_types-$plugin_id.rrd")
+#					epoche=$(rrdtool last "$RRD_DATADIR/$dev_name/$collectd_plugin-$plugin_id/$collectd_types.rrd")
 					date_slot=$(date -d "@$epoche" "+%Y/%m/%d")
 					time_slot=$(date -d "@$epoche" "+%H:%M:%S")
 					log "bacrr $devid trend-log $obj_id log-buffer 3 $date_slot $time_slot 60"
@@ -220,7 +262,8 @@ while true; do
 							json_get_var time 1
 							json_get_var timeval 2
 							if [ "$timeval" == "Null" ] ; then
-								log "Null $dev_name/$collectd_plugin-$plugin_id/$collectd_types"
+								log "Null $dev_name/bac-$plugin_instance/$collectd_types-$plugin_id"
+#								log "Null $dev_name/$collectd_plugin-$plugin_id/$collectd_types"
 							else
 								case $ref_object_type in
 									binary*)
@@ -232,8 +275,10 @@ while true; do
 										;;
 								esac
 								utime=$(date -d "$time" -D "%Y-%m-%dT%H:%M:%S" +"%s")
-								log "PUTVAL $dev_name/$collectd_plugin-$plugin_id/$collectd_types interval=$INTERVAL $utime:$timeval"
-								echo "PUTVAL $dev_name/$collectd_plugin-$plugin_id/$collectd_types interval=$INTERVAL $utime:$timeval"
+								log "PUTVAL $dev_name/bac-$plugin_instance/$collectd_types-$plugin_id interval=$INTERVAL $utime:$timeval"
+								echo "PUTVAL $dev_name/bac-$plugin_instance/$collectd_types-$plugin_id interval=$INTERVAL $utime:$timeval"
+#								log "PUTVAL $dev_name/$collectd_plugin-$plugin_id/$collectd_types interval=$INTERVAL $utime:$timeval"
+#								echo "PUTVAL $dev_name/$collectd_plugin-$plugin_id/$collectd_types interval=$INTERVAL $utime:$timeval"
 							fi
 							i=$(( i + 1 ))
 							json_select ..
@@ -255,8 +300,10 @@ while true; do
 					fi
 					;;
 			esac
-			log "PUTVAL $dev_name/$collectd_plugin-$plugin_id/$collectd_types interval=$INTERVAL $utime:$value"
-			echo "PUTVAL $dev_name/$collectd_plugin-$plugin_id/$collectd_types interval=$INTERVAL $utime:$value"
+			log "PUTVAL $dev_name/bac-$plugin_instance/$collectd_types-$plugin_id interval=$INTERVAL $utime:$value"
+			echo "PUTVAL $dev_name/bac-$plugin_instance/$collectd_types-$plugin_id interval=$INTERVAL $utime:$value"
+#			log "PUTVAL $dev_name/$collectd_plugin-$plugin_id/$collectd_types interval=$INTERVAL $utime:$value"
+#			echo "PUTVAL $dev_name/$collectd_plugin-$plugin_id/$collectd_types interval=$INTERVAL $utime:$value"
 		done
 		log "devid $devids $devid"
 	done
