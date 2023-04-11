@@ -63,7 +63,7 @@ get_config() {
 while true; do
 	get_config
 	if [ ! -f /tmp/devlist.json ] ; then
-		touch /tmp/devlist.json.get
+		touch /tmp/devlist.json.get 2>/dev/null
 		log "sleep 10 /tmp/devlist.json.get"
 		sleep 10
 		continue
@@ -90,7 +90,7 @@ while true; do
 	log "devids: $devids"
 	json_cleanup
 	if [ "$devids" == "" ] ; then
-		touch /tmp/devlist.json.get
+		touch /tmp/devlist.json.get 2>/dev/null
 		log "sleep 10 /tmp/devlist.json.get no device"
 		sleep 10
 		continue
@@ -98,8 +98,8 @@ while true; do
 	interval_offset=0
 	for devid in $devids; do
 		if [ ! -f /tmp/objlist_$devid.json ] ; then
-			touch /tmp/objlist.json.get
-			touch /tmp/objlist_$devid.json.get
+			touch /tmp/objlist.json.get 2>/dev/null
+			touch /tmp/objlist_$devid.json.get 2>/dev/null
 			log "sleep 10 /tmp/objlist_$devid.json.get"
 			sleep 10
 			interval_offset="$BACNET_INTERVAL"
@@ -122,15 +122,16 @@ while true; do
 		log "objs: $objs"
 		json_cleanup
 		if [ "$objs" == "" ] ; then
-			touch /tmp/objlist.json.get
-			touch /tmp/objlist_$devid.json.get
+			touch /tmp/objlist.json.get 2>/dev/null
+			touch /tmp/objlist_$devid.json.get 2>/dev/null
 			log "sleep 10 /tmp/objlist_$devid.json.get no objects"
 			sleep 10
 			interval_offset="$BACNET_INTERVAL"
 			continue
 		fi
-		dev_name="$(bacrp $devid device $devid object-name | tr -d '\r' | tr -s ' ' '_' | sed 's/\ä/ae/g;s/\Ä/Ae/g;s/\ö/oe/g;s/\Ö/Oe/g;s/\ü/ue/g;s/\Ü/Ue/g;s/\ß/ss/g')"
+		dev_name="$(bacrp $devid device $devid object-name)"
 		[ "$?" == "0" ] || continue
+		dev_name="$(echo $dev_name | tr -d '\r' | tr -s ' ' '_' | sed 's/\ä/ae/g;s/\Ä/Ae/g;s/\ö/oe/g;s/\Ö/Oe/g;s/\ü/ue/g;s/\Ü/Ue/g;s/\ß/ss/g')"
 		[ -z "$dev_name" ] && continue
 
 		config_load bacnetclient
@@ -145,11 +146,13 @@ while true; do
 
 		for obj_id in $objs ; do
 			log "bacrp $devid trend-log $obj_id 141"
-			count="$(bacrp $devid trend-log $obj_id 141 | tr -d '\r')"
+			count="$(bacrp $devid trend-log $obj_id 141)"
 			[ "$?" == "0" ] || continue
+			count="$(echo $count | tr -d '\r')"
 			log "bacrp $devid trend-log $obj_id 132"
-			ref="$(bacrp $devid trend-log $obj_id 132 | tr -d '\r')"
+			ref="$(bacrp $devid trend-log $obj_id 132)"
 			[ "$?" == "0" ] || continue
+			ref="$(echo $ref | tr -d '\r')"
 			j=1
 			ref_devid=""
 			for opt in $ref ; do
@@ -164,26 +167,29 @@ while true; do
 			if [ -z "$ref_devid" ] ; then
 				ref_devid="$devid"
 			else
-				dev_name="$(bacrp $ref_devid device $ref_devid object-name | tr -d '\r' | tr -s ' ' '_' | sed 's/\ä/ae/g;s/\Ä/Ae/g;s/\ö/oe/g;s/\Ö/Oe/g;s/\ü/ue/g;s/\Ü/Ue/g;s/\ß/ss/g')"
+				dev_name="$(bacrp $ref_devid device $ref_devid object-name)"
 				[ "$?" == "0" ] || continue
+				dev_name="$(echo $dev_name | tr -d '\r' | tr -s ' ' '_' | sed 's/\ä/ae/g;s/\Ä/Ae/g;s/\ö/oe/g;s/\Ö/Oe/g;s/\ü/ue/g;s/\Ü/Ue/g;s/\ß/ss/g')"
 				[ -z "$dev_name" ] && continue
 			fi
-			object_name="$(bacrp $ref_devid $ref_object_type $ref_object_instance object-name | tr -d '\r' | tr -s ' ' '_' | sed 's/\ä/ae/g;s/\Ä/Ae/g;s/\ö/oe/g;s/\Ö/Oe/g;s/\ü/ue/g;s/\Ü/Ue/g;s/\ß/ss/g')"
+			object_name="$(bacrp $ref_devid $ref_object_type $ref_object_instance object-name)"
 			[ "$?" == "0" ] || continue
+			object_name="$(echo $object_name | tr -d '\r' | tr -s ' ' '_' | sed 's/\ä/ae/g;s/\Ä/Ae/g;s/\ö/oe/g;s/\Ö/Oe/g;s/\ü/ue/g;s/\Ü/Ue/g;s/\ß/ss/g')"
 			[ -z "$object_name" ] && continue
-			Description="$(bacrp $ref_devid $ref_object_type $ref_object_instance Description | tr -d '\r' | tr -s ' ' '_'| sed 's/\ä/ae/g;s/\Ä/Ae/g;s/\ö/oe/g;s/\Ö/Oe/g;s/\ü/ue/g;s/\Ü/Ue/g;s/\ß/ss/g')"
+			Description="$(bacrp $ref_devid $ref_object_type $ref_object_instance Description)"
 			[ "$?" == "0" ] || continue
+			Description="$(echo $Description | tr -d '\r' | tr -s ' ' '_'| sed 's/\ä/ae/g;s/\Ä/Ae/g;s/\ö/oe/g;s/\Ö/Oe/g;s/\ü/ue/g;s/\Ü/Ue/g;s/\ß/ss/g')"
 			ret=0
 			case $ref_object_type in
 				analog*)
 					log "bacrp $ref_devid $ref_object_type $ref_object_instance units"
-					value_units="$(bacrp $ref_devid $ref_object_type $ref_object_instance units | tr -d '\r')"
+					value_units="$(bacrp $ref_devid $ref_object_type $ref_object_instance units)"
 					ret="$?"
+					value_units="$(echo $value_units | tr -d '\r')"
 					;;
 				binary*)
 					log "bacrp $ref_devid $ref_object_type $ref_object_instance state"
 					value_units="binary"
-					ret="$?"
 					;;
 				*)
 					value_units="unknown"
@@ -298,7 +304,9 @@ while true; do
 				rm -f /tmp/bactrt.json
 			done
 			utime=$(date +"%s")
-			value="$(bacrp $ref_devid $ref_object_type $ref_object_instance $ref_object_property | tr -d '\r')"
+			value="$(bacrp $ref_devid $ref_object_type $ref_object_instance $ref_object_property)"
+			[ "$?" == "0" ] || continue
+			value="$(echo $value | tr -d '\r')"
 			case $ref_object_type in
 				binary*)
 					if [ "$value" == "active" ] ; then

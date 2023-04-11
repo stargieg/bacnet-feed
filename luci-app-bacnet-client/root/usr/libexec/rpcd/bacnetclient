@@ -29,14 +29,17 @@ get_event() {
 	local object_instance="$3"
 	json_add_string "object_instance" "$object_instance"
 	json_add_string "object_type" "$object_type"
-	object_name="$(bacrp $id $object_type $object_instance object-name | tr -d '\r')"
+	object_name="$(bacrp $id $object_type $object_instance object-name)"
 	[ "$?" == "0" ] || object_name="Type$object_type""Instance$instance"
+	object_name="$(echo $object_name | tr -d '\r')"
 	json_add_string "object_name" "$object_name"
-	Description="$(bacrp $id $object_type $object_instance Description | tr -d '\r')"
+	Description="$(bacrp $id $object_type $object_instance Description)"
 	[ "$?" == "0" ] || Description="$object_name"
+	Description="$(echo $Description | tr -d '\r')"
 	json_add_string "Description" "$Description"
-	event_state="$(bacrp $id $object_type $object_instance event-state | tr -d '\r')"
+	event_state="$(bacrp $id $object_type $object_instance event-state)"
 	[ "$?" == "0" ] || event_state="invalid"
+	event_state="$(echo $event_state | tr -d '\r')"
 
 	event_time_stamp_normal="0"
 	event_state_u="$event_state"
@@ -51,8 +54,9 @@ get_event() {
 		;;
 		"normal")
 			event_state="Normal"
-			event_time_stamp_normal="$(bacrp $id $object_type $object_instance event-time-stamps 3 | tr -d '\r')"
+			event_time_stamp_normal="$(bacrp $id $object_type $object_instance event-time-stamps 3)"
 			[ "$?" == "0" ] || event_time_stamp_normal="0"
+			event_time_stamp_normal="$(echo $event_time_stamp_normal | tr -d '\r')"
 		;;
 		"fault")
 			event_state="Fehler"
@@ -64,41 +68,50 @@ get_event() {
 	json_add_string "event_state" "$event_state"
 	json_add_string "event_time_stamp_normal" "$event_time_stamp_normal"
 
-	event_time_stamp="$(bacrp $id $object_type $object_instance event-time-stamps 1 | tr -d '\r')"
+	event_time_stamp="$(bacrp $id $object_type $object_instance event-time-stamps 1)"
 	if [ "$?" != "0" ] ; then
-		event_time_stamp="$(bacrp $id $object_type $object_instance event-time-stamps -1 | tr -d '\r'| tr -d '{}' | cut -d ',' -f 1)"
+		event_time_stamp="$(echo $event_time_stamp | tr -d '\r')"
+		event_time_stamp="$(bacrp $id $object_type $object_instance event-time-stamps -1)"
 		if [ "$?" != "0" ] ; then
 			event_time_stamp=0
+		else
+			event_time_stamp="$(echo $event_time_stamp | tr -d '\r'| tr -d '{}' | cut -d ',' -f 1)"
 		fi
 	fi
 	json_add_string "event_time_stamp" "$event_time_stamp"
 
-	value="$(bacrp $id $object_type $object_instance present-value 2>/dev/null | tr -d '\r')"
+	value="$(bacrp $id $object_type $object_instance present-value)"
 	[ "$?" == "0" ] || value="invalid"
+	value="$(echo $value | tr -d '\r')"
 	unit=""
 	low_limit=""
 	high_limit=""
 	case $value in
 		active*)
-			value="$(bacrp $id $object_type $object_instance active-text | tr -d '\r')"
+			value="$(bacrp $id $object_type $object_instance active-text)"
 			[ "$?" == "0" ] || value="active"
+			value="$(echo $value | tr -d '\r')"
 			json_add_string "value" "$value"
 		;;
 		inactive*)
-			value="$(bacrp $id $object_type $object_instance inactive-text | tr -d '\r')"
+			value="$(bacrp $id $object_type $object_instance inactive-text)"
 			[ "$?" == "0" ] || value="inactive"
+			value="$(echo $value | tr -d '\r')"
 			json_add_string "value" "$value"
 		;;
 		*[0-9])
 			json_add_string "value" "$value"
-			units="$(bacrp $id $object_type $object_instance units | tr -d '\r')"
+			units="$(bacrp $id $object_type $object_instance units)"
 			[ "$?" == "0" ] || units=""
+			units="$(echo $units | tr -d '\r')"
 			json_add_string "units" "$units"
-			low_limit="$(bacrp $id $object_type $object_instance low-limit | tr -d '\r')"
+			low_limit="$(bacrp $id $object_type $object_instance low-limit)"
 			[ "$?" == "0" ] || low_limit=""
+			low_limit="$(echo $low_limit | tr -d '\r')"
 			json_add_string "low_limit" "$low_limit"
-			high_limit="$(bacrp $id $object_type $object_instance high-limit | tr -d '\r')"
+			high_limit="$(bacrp $id $object_type $object_instance high-limit)"
 			[ "$?" == "0" ] || high_limit=""
+			high_limit="$(echo $high_limit | tr -d '\r')"
 			json_add_string "high_limit" "$high_limit"
 		;;
 		*)
@@ -131,16 +144,20 @@ get_event() {
 get_eventlist() {
 	local id="$1"
 	local dev=""
-	support="$(bacrp $id device $id protocol-services-supported | cut -d ',' -f4)"
+	support="$(bacrp $id device $id protocol-services-supported)"
 	[ "$?" == "0" ] || return
+	support="$(echo $support | cut -d ',' -f4)"
 	[ "$support" == "true" ] || return
 	log "get_eventlist $id"
-	dev="$(bacrp $id device $id object-name | tr -d '\r')"
+	dev="$(bacrp $id device $id object-name)"
 	[ "$?" == "0" ] || return
-	devdesc="$(bacrp $id device $id Description | tr -d '\r')"
+	dev="$(echo $dev | tr -d '\r')"
+	devdesc="$(bacrp $id device $id Description)"
 	[ "$?" == "0" ] || return
-	devloc="$(bacrp $id device $id Location | tr -d '\r')"
+	devdesc="$(echo $devdesc | tr -d '\r')"
+	devloc="$(bacrp $id device $id Location)"
 	[ "$?" == "0" ] || return
+	devloc="$(echo $devloc | tr -d '\r')"
 	OIFS=$IFS
 	IFS=$'\n'
 	for line in $(bacge $id|grep $id);do
@@ -167,15 +184,20 @@ get_eventlistjson() {
 	[ -f /tmp/bacnetclient.lock ] && return
 	touch /tmp/bacnetclient.lock
 	log "get_eventlistjson $id"
-	support="$(bacrp $id device $id protocol-services-supported | cut -d ',' -f4)"
+	support="$(bacrp $id device $id protocol-services-supported)"
 	[ "$?" == "0" ] || return
+	support="$(echo $support | cut -d ',' -f4)"
 	[ "$support" == "true" ] || return
-	dev="$(bacrp $id device $id object-name | tr -d '\r')"
+	log "get_eventlist $id"
+	dev="$(bacrp $id device $id object-name)"
 	[ "$?" == "0" ] || return
-	devdesc="$(bacrp $id device $id Description | tr -d '\r')"
+	dev="$(echo $dev | tr -d '\r')"
+	devdesc="$(bacrp $id device $id Description)"
 	[ "$?" == "0" ] || return
-	devloc="$(bacrp $id device $id Location | tr -d '\r')"
+	devdesc="$(echo $devdesc | tr -d '\r')"
+	devloc="$(bacrp $id device $id Location)"
 	[ "$?" == "0" ] || return
+	devloc="$(echo $devloc | tr -d '\r')"
 	json_init
 	json_add_array "list"
 	OIFS=$IFS
@@ -203,12 +225,15 @@ get_devlist() {
 	local id="$1"
 	local dev=""
 	log "get_devlist $id"
-	dev="$(bacrp $id device $id object-name | tr -d '\r')"
+	dev="$(bacrp $id device $id object-name)"
 	[ "$?" == "0" ] || return
-	devdesc="$(bacrp $id device $id Description | tr -d '\r')"
+	dev="$(echo $dev | tr -d '\r')"
+	devdesc="$(bacrp $id device $id Description)"
 	[ "$?" == "0" ] || return
-	devloc="$(bacrp $id device $id Location | tr -d '\r')"
+	devdesc="$(echo $devdesc | tr -d '\r')"
+	devloc="$(bacrp $id device $id Location)"
 	[ "$?" == "0" ] || return
+	devloc="$(echo $devloc | tr -d '\r')"
 	json_add_object 0
 	json_add_string "devid" "$id"
 	json_add_string "object_name" "$dev"
@@ -259,10 +284,12 @@ get_objlist() {
 		json_get_keys object_type
 		object_type="$(echo $object_type | tr _ -)"
 		json_get_var object_instance $object_type
-		object_name="$(bacrp $id $object_type $object_instance object-name | tr -d '\r')"
+		object_name="$(bacrp $id $object_type $object_instance object-name)"
 		[ "$?" == "0" ] || object_name=""
-		Description="$(bacrp $id $object_type $object_instance Description | tr -d '\r')"
+		object_name="$(echo $object_name | tr -d '\r')"
+		Description="$(bacrp $id $object_type $object_instance Description)"
 		[ "$?" == "0" ] || Description=""
+		Description="$(echo $Description | tr -d '\r')"
 		json_add_string "devid" "$id"
 		json_add_string "object_type" "$object_type"
 		json_add_string "object_instance" "$object_instance"
@@ -271,7 +298,9 @@ get_objlist() {
 		json_select ..
 		i=$(( i + 1 ))
 	done
-	json_dump > /tmp/objlist_$id.json.tmp
+	if [ $i > 1 ] ; then
+		json_dump > /tmp/objlist_$id.json.tmp
+	fi
 	json_cleanup
 	mv /tmp/objlist_$id.json.tmp /tmp/objlist_$id.json
 	rm -f /tmp/objlist_$id.json.get
@@ -337,8 +366,9 @@ devlist() {
 	[ -f /tmp/bacnetclient.lock ] && return
 	touch /tmp/bacnetclient.lock
 	log "devlist"
-	devids="$(bacwi | tr -d '\r' | grep -v ';' | cut -d ' ' -f 3)"
+	bacwi >/tmp/bacwi 2>/dev/null
 	if [ "$?" == "0" ] ; then
+		devids="$(cat /tmp/bacwi | tr -d '\r' | grep -v ';' | cut -d ' ' -f 3)"
 		json_init
 		json_add_array "list"
 		for devid in $devids;do
