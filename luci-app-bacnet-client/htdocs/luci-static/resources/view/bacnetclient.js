@@ -90,7 +90,9 @@ return view.extend({
 		o.value("1");
 		o.value("2");
 		o.optional = true;
-		o = s.option(form.DynamicList, "deny_list", _("Trendlog deny list"), "devid");
+		o = s.option(form.DynamicList, "deny_list", _("deny list"), "devid");
+		o.optional = true;
+		o = s.option(form.DynamicList, "deny_list_log", _("Trendlog deny list"), "devid");
 		o.optional = true;
 		o = s.option(form.Flag, 'debug', _('Debug Log'));
 		o.rmempty = false;

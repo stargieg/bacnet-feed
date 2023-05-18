@@ -36,6 +36,8 @@ get_config() {
 	export BACNET_DENY_LIST=""
 	config_get deny_list default deny_list
 	[ -z "$deny_list" ] || export BACNET_DENY_LIST="$deny_list"
+	config_get deny_list_log default deny_list_log
+	[ -z "$deny_list_log" ] || export BACNET_DENY_LIST="$BACNET_DENY_LIST $deny_list_log"
 	export BACNET_DEBUG="0"
 	config_get debug default debug
 	[ -z "$debug" ] || export BACNET_DEBUG="$debug"
