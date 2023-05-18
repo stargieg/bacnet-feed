@@ -70,13 +70,14 @@ get_event() {
 
 	event_time_stamp="$(bacrp $id $object_type $object_instance event-time-stamps 1)"
 	if [ "$?" != "0" ] ; then
-		event_time_stamp="$(echo $event_time_stamp | tr -d '\r')"
 		event_time_stamp="$(bacrp $id $object_type $object_instance event-time-stamps -1)"
 		if [ "$?" != "0" ] ; then
 			event_time_stamp=0
 		else
 			event_time_stamp="$(echo $event_time_stamp | tr -d '\r'| tr -d '{}' | cut -d ',' -f 1)"
 		fi
+	else
+		event_time_stamp="$(echo $event_time_stamp | tr -d '\r')"
 	fi
 	json_add_string "event_time_stamp" "$event_time_stamp"
 
@@ -174,7 +175,7 @@ get_eventlist() {
 	IFS=$OIFS
 	if [ "$BACNET_MAIL" == "1" ] ; then
 		rm -f /tmp/bacevent/$id-*
-		mv /tmp/bacevent_tmp/$id-* /tmp/bacevent/
+		mv /tmp/bacevent_tmp/$id-* /tmp/bacevent/ 2>/dev/null
 	fi
 }
 
