@@ -1,8 +1,25 @@
 diff --git a/src/bacnet/bacapp.c b/src/bacnet/bacapp.c
-index 73ab9528..49628d7a 100644
+index 73ab9528..a85d2a35 100644
 --- a/src/bacnet/bacapp.c
 +++ b/src/bacnet/bacapp.c
-@@ -2268,11 +2268,7 @@ int bacapp_snprintf_value(
+@@ -2219,16 +2219,6 @@ int bacapp_snprintf_value(
+             case BACNET_APPLICATION_TAG_CHARACTER_STRING:
+                 len = characterstring_length(&value->type.Character_String);
+                 char_str = characterstring_value(&value->type.Character_String);
+-                slen = snprintf(str, str_len, "\"");
+-                if (str) {
+-                    str += slen;
+-                    if (str_len >= slen) {
+-                        str_len -= slen;
+-                    } else {
+-                        str_len = 0;
+-                    }
+-                }
+-                ret_val += slen;
+ #if (__STDC_VERSION__ >= 199901L) && defined(__STDC_ISO_10646__)
+                 if (characterstring_encoding(&value->type.Character_String) ==
+                     CHARACTER_UTF8) {
+@@ -2268,11 +2258,7 @@ int bacapp_snprintf_value(
  #endif
                  {
                      for (i = 0; i < len; i++) {
@@ -15,7 +32,7 @@ index 73ab9528..49628d7a 100644
                          if (str) {
                              str += slen;
                              if (str_len >= slen) {
-@@ -2285,8 +2281,6 @@ int bacapp_snprintf_value(
+@@ -2285,8 +2271,6 @@ int bacapp_snprintf_value(
                          char_str++;
                      }
                  }
@@ -24,7 +41,7 @@ index 73ab9528..49628d7a 100644
                  break;
  #endif
  #if defined(BACAPP_BIT_STRING)
-@@ -2673,22 +2667,9 @@ int bacapp_snprintf_value(
+@@ -2673,22 +2657,9 @@ int bacapp_snprintf_value(
                      name = &value->type.Host_Address.host.name;
                      len = characterstring_length(name);
                      char_str = characterstring_value(name);
@@ -48,7 +65,7 @@ index 73ab9528..49628d7a 100644
                          char_str++;
                          if (str) {
                              str += slen;
-@@ -2700,8 +2681,6 @@ int bacapp_snprintf_value(
+@@ -2700,8 +2671,6 @@ int bacapp_snprintf_value(
                          }
                          ret_val += slen;
                      }
