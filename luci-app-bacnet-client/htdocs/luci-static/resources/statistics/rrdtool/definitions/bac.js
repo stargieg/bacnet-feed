@@ -40,6 +40,22 @@ return baseclass.extend({
 				}
 			}
 		};
+		var speed = {
+			title: "%H: Speed of %pi",
+			alt_autoscale: true,
+			vlabel: "Hz",
+			number_format: "%3.1lf%s",
+			data: {
+				types: [ "frequency" ],
+				options: {
+					frequency__value: {
+						title: "%di",
+						overlay: true,
+						noarea: true
+					}
+				}
+			}
+		};
 		var pascals = {
 			title: "%H: Pressure of %pi",
 			alt_autoscale: true,
@@ -126,6 +142,8 @@ return baseclass.extend({
 				p.push(binary);
 			else if (types[i] == 'percent')
 				p.push(control);
+			else if (types[i] == 'frequency')
+				p.push(speed);
 			else if (types[i] == 'flow')
 				p.push(flowrate);
 			else if (types[i] == 'pressure')
