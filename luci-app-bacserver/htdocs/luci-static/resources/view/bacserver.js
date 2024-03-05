@@ -20,7 +20,7 @@ return view.extend({
 		o = s.option(form.Value, "Id", _("Id"), "4712");
 		o.optional = false;
 		o.placeholder = 4712;
-		o.datatype = "portrange";
+		o.datatype = "uinteger";
 		o = s.option(form.Value, "Name", _("Name"), "Name");
 		o.optional = false;
 		o.placeholder = "SimpleServer";
