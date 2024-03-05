@@ -2,7 +2,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=bacnet-stack
 PKG_VERSION:=1.3.4
-PKG_RELEASE:=22
+PKG_RELEASE:=23
 #PKG_SOURCE_URL:=https://github.com/bacnet-stack/bacnet-stack.git
 PKG_SOURCE_URL:=https://github.com/stargieg/bacnet-stack-upstream.git
 PKG_SOURCE_PROTO:=git
@@ -129,7 +129,7 @@ endef
 endif
 ifeq ($(BUILD_VARIANT),utils-bip)
 MAKE_VARS += BACDL=bip
-MAKE_VARS += BBMD=client
+MAKE_VARS += BBMD=full
 MAKE_VARS += UCI=1
 define Build/Compile
         $(MAKE_VARS) $(MAKE) -C $(PKG_BUILD_DIR) apps
@@ -137,7 +137,7 @@ endef
 endif
 ifeq ($(BUILD_VARIANT),utils-bip6)
 MAKE_VARS += BACDL=bip6
-MAKE_VARS += BBMD=client
+MAKE_VARS += BBMD=full
 MAKE_VARS += UCI=1
 define Build/Compile
         $(MAKE_VARS) $(MAKE) -C $(PKG_BUILD_DIR) apps
