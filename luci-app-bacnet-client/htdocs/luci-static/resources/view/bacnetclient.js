@@ -90,13 +90,15 @@ return view.extend({
 		o.value("1");
 		o.value("2");
 		o.optional = true;
-		o = s.option(form.DynamicList, "deny_list", _("deny list"), "devid");
+		o = s.option(form.DynamicList, "deny_list", _("Device deny list"), "devid");
 		o.optional = true;
+		o = s.option( form.Value, "collectd_interval", _("Trendlog interval for statistics"), "minutes");
+		o.optional = true;
+		o.rmempty = true;
+		o.datatype = "port";
 		o = s.option(form.DynamicList, "deny_list_log", _("Trendlog deny list"), "devid");
 		o.optional = true;
-		o = s.option(form.Flag, 'debug', _('Debug Log'));
-		o.rmempty = false;
-		o = s.option( form.Value, "interval", _("Pull interval"), "seconds");
+		o = s.option( form.Value, "eventlist_interval", _("Eventlist interval for mail"), "minutes");
 		o.optional = true;
 		o.rmempty = true;
 		o.datatype = "port";
@@ -136,6 +138,8 @@ return view.extend({
 		o.datatype = "string";
 		o = s.option(form.Value, "delimeter_group_desc_count", _("fields of objct description"), _("fields of objct name for group"));
 		o.datatype = "portrange";
+		o = s.option(form.Flag, 'debug', _('Debug Log'));
+		o.rmempty = false;
 		return m.render();
 	}
 });

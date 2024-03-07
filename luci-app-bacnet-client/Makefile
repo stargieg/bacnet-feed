@@ -1,8 +1,8 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-bacnet-client
-PKG_VERSION:=0.2.4
-PKG_RELEASE:=17
+PKG_VERSION:=0.2.5
+PKG_RELEASE:=1
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
 
 include $(INCLUDE_DIR)/package.mk
@@ -12,7 +12,7 @@ define Package/luci-app-bacnet-client
   CATEGORY:=LuCI
   SUBMENU:=3. Applications
   TITLE:=Bacnet Device
-  EXTRA_DEPENDS:=luci-mod-admin-full, msmtp, luci-app-statistics, collectd-mod-exec
+  EXTRA_DEPENDS:=luci-mod-admin-full, msmtp, luci-app-statistics, collectd-mod-unixsock, socat
 endef
 
 define Build/Prepare
@@ -44,7 +44,6 @@ define Package/luci-app-bacnet-client/install
 	$(INSTALL_CONF) ./root/etc/bacalarmtemplate.txt $(1)/etc/
 	$(INSTALL_DIR) $(1)/etc/uci-defaults
 	$(INSTALL_DATA) ./root/etc/uci-defaults/bacnetclient $(1)/etc/uci-defaults/
-	$(INSTALL_BIN) ./root/etc/collectd-exec-bacnet.sh $(1)/etc/
 	$(INSTALL_DIR) $(1)/www/luci-static/resources/view
 	$(INSTALL_DATA) ./htdocs/luci-static/resources/view/* $(1)/www/luci-static/resources/view
 	$(INSTALL_DIR) $(1)/www/luci-static/resources/statistics/rrdtool/definitions

@@ -16,6 +16,11 @@ config dev default
 	option delimeter_group_name_count '3'
 	option delimeter_group_desc_count '5'
 	list deny_list '1008104'
+	list deny_list '4194303'
+	option collectd_interval '10'
+	option eventlist_interval '5'
+	list deny_list_log '4194303'
+	list deny_list_log '1008104'
 
 config dev '1008060'
 	option delimeter_name '_'

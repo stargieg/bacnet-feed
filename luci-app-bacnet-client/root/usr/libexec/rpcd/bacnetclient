@@ -19,13 +19,19 @@ log() {
 	fi
 }
 
-collect() {
-	rm -f /tmp/collect.txt.tmp
-	rm -f /tmp/collect.txt
+collectd() {
+	touch /tmp/collectd.last
+	config_load luci_statistics
+	config_get enable collectd_unixsock enable
+	[ "$enable" == "1" ] || return
+	config_get SocketFile collectd_unixsock SocketFile
+	[ -e "$SocketFile" ] || return
+	config_get DataDir collectd_rrdtool DataDir
+	[ -z "$DataDir" ] && return
 	if [ ! -f /tmp/devlist.json ] ; then
 		touch /tmp/devlist.json.get 2>/dev/null
 		log "touch /tmp/devlist.json.get"
-		continue
+		return
 	fi
 	devids=""
 	json_load_file /tmp/devlist.json
@@ -205,14 +211,14 @@ collect() {
 				del="$delimeter_name"
 				plugin_id="$plugin_id_name""$del""$plugin_id_description"
 			fi
-			[ -f "$RRD_DATADIR/$dev_name/bac-$plugin_instance/$collectd_types-$plugin_id.rrd" ] || new="1"
+			[ -f "$DataDir/$dev_name/bac-$plugin_instance/$collectd_types-$plugin_id.rrd" ] || new="1"
 			while [ $count -ge $drange ] ; do
 				status=0
 				if [ "$new" == "1" ] ; then
 					log "bacrr $devid trend-log $obj_id log-buffer 1 $srange $range"
 					bacrr $devid trend-log $obj_id log-buffer 1 $srange $range > /tmp/bactrt.json 2>/dev/null || status=1
 				else
-					epoche=$(rrdtool last "$RRD_DATADIR/$dev_name/bac-$plugin_instance/$collectd_types-$plugin_id.rrd")
+					epoche=$(rrdtool last "$DataDir/$dev_name/bac-$plugin_instance/$collectd_types-$plugin_id.rrd")
 					date_slot=$(date -d "@$epoche" "+%Y/%m/%d")
 					time_slot=$(date -d "@$epoche" "+%H:%M:%S")
 					log "bacrr $devid trend-log $obj_id log-buffer 3 $date_slot $time_slot 60"
@@ -244,7 +250,8 @@ collect() {
 								esac
 								utime=$(date -d "$time" -D "%Y-%m-%dT%H:%M:%S" +"%s")
 								log "PUTVAL $dev_name/bac-$plugin_instance/$collectd_types-$plugin_id interval=10 $utime:$timeval"
-								echo "PUTVAL $dev_name/bac-$plugin_instance/$collectd_types-$plugin_id interval=10 $utime:$timeval" >> /tmp/collect.txt.tmp
+								echo "PUTVAL $dev_name/bac-$plugin_instance/$collectd_types-$plugin_id interval=10 $utime:$timeval" | \
+								socat - UNIX-CLIENT:"$SocketFile"
 							fi
 							i=$(( i + 1 ))
 							json_select ..
@@ -269,15 +276,11 @@ collect() {
 					;;
 			esac
 			log "PUTVAL $dev_name/bac-$plugin_instance/$collectd_types-$plugin_id interval=10 $utime:$value"
-			echo "PUTVAL $dev_name/bac-$plugin_instance/$collectd_types-$plugin_id interval=10 $utime:$value"  >> /tmp/collect.txt.tmp
+			echo "PUTVAL $dev_name/bac-$plugin_instance/$collectd_types-$plugin_id interval=10 $utime:$value" | \
+			socat - UNIX-CLIENT:"$SocketFile"
 		done
 		log "devid $devids $devid"
 	done
-	if [ -f /tmp/collect.txt.tmp ] ; then
-		log "mv /tmp/collect.txt.tmp /tmp/collect.txt"
-		chown nobody:nogroup /tmp/collect.txt.tmp
-		mv /tmp/collect.txt.tmp /tmp/collect.txt
-	fi
 }
 
 get_event() {
@@ -593,6 +596,7 @@ eventlist() {
 	[ -f /tmp/bacnetclient.lock ] && return
 	touch /tmp/bacnetclient.lock
 	[ -f /tmp/devlist.json ] || ( touch /tmp/devlist.json.get ; return )
+	touch /tmp/eventlist.last
 	local devids=""
 	json_init
 	json_load_file /tmp/devlist.json
@@ -786,12 +790,15 @@ get_config() {
 	config_get delimeter_group_desc_count default delimeter_group_desc_count
 	[ -z "$delimeter_group_desc_count" ] && delimeter_group_desc_count=2
 	export BACNET_DELIMETER_GROUP_DESC_COUNT="$delimeter_group_desc_count"
-	DataDir="$(uci get luci_statistics.collectd_rrdtool.DataDir)"
-	[ -z "$DataDir" ] && DataDir="/tmp/rrd"
-	export RRD_DATADIR="$DataDir"
-	export BACNET_DEBUG="0"
+	config_get collectd_interval default collectd_interval
+	[ -z "$collectd_interval" ] && collectd_interval=10
+	export COLLECTD_INTERVAL="$collectd_interval"
 	config_get debug default debug
-	[ -z "$debug" ] || export BACNET_DEBUG="$debug"
+	[ -z "$debug" ] || export BACNET_DEBUG="0"
+	export BACNET_DEBUG="$debug"
+	config_get eventlist_interval default eventlist_interval
+	[ -z "$eventlist_interval" ] && eventlist_interval=5
+	export EVENTLIST_INTERVAL="$eventlist_interval"
 	if [ -f /usr/bin/msmtp ] ; then
 		config_get mail default mail
 		[ -z "$mail" ] || export BACNET_MAIL="$mail"
@@ -874,16 +881,17 @@ case "$1" in
 			objloc) get_config && write_objloc ;;
 			ackevent) get_config && write_ackalarm ;;
 			_cron)
-				[ -f /tmp/devlist.json.get ] && get_config && devlist
+				get_config
+				[ -f /tmp/devlist.json.get ] && devlist
 				rm -f /tmp/devlist.json.get
-				[ -f /tmp/eventlist.json.get ] && get_config && eventlist
+				[ -f /tmp/eventlist.json.get ] && eventlist
 				rm -f /tmp/eventlist.json.get
-				[ -f /tmp/objlist.json.get ] && get_config && objlistjson
+				[ -z "$(find /tmp/eventlist.last -mmin -$EVENTLIST_INTERVAL -exec echo lower \; 2>/dev/null)" ] && eventlist
+				[ -f /tmp/objlist.json.get ] && objlistjson
 				rm -f /tmp/objlist.json.get
-				[ -f /tmp/deveventlist.json.get ] && get_config && eventlistjson
+				[ -f /tmp/deveventlist.json.get ] && eventlistjson
 				rm -f /tmp/deveventlist.json.get
-				[ -f /tmp/collect.get ] && get_config && collect
-				rm -f /tmp/collect.get
+				[ -z "$(find /tmp/collectd.last -mmin -$COLLECTD_INTERVAL -exec echo lower \; 2>/dev/null)" ] && collectd
 			;;
 		esac
 	;;
