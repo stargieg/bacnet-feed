@@ -2,11 +2,11 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=bacnet-stack
 PKG_VERSION:=1.3.4
-PKG_RELEASE:=24
+PKG_RELEASE:=25
 #PKG_SOURCE_URL:=https://github.com/bacnet-stack/bacnet-stack.git
 PKG_SOURCE_URL:=https://github.com/stargieg/bacnet-stack-upstream.git
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_DATE:=2024-03-05
+PKG_SOURCE_DATE:=2024-03-07
 PKG_SOURCE_VERSION:=server-uci
 PKG_MIRROR_HASH:=skip
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(BUILD_VARIANT)/$(PKG_NAME)-$(PKG_VERSION)
@@ -98,6 +98,7 @@ endef
 
 MAKE_VARS += BUILD=release
 MAKE_VARS += BACNET_PORT=linux
+MAKE_VARS += CSTANDARD=" -std=gnu17"
 MAKE_VARS += CC="$(TARGET_CC)"
 MAKE_VARS += AR="$(TARGET_AR)"
 MAKE_VARS += CFLAGS="$(TARGET_CFLAGS)"
