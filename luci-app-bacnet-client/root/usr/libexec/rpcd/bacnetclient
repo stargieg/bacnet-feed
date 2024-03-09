@@ -651,6 +651,7 @@ eventlistjson() {
 devlist() {
 	[ -f /tmp/bacnetclient.lock ] && return
 	touch /tmp/bacnetclient.lock
+	touch /tmp/devlist.last
 	log "devlist"
 	bacwi >/tmp/bacwi 2>/dev/null
 	if [ "$?" == "0" ] ; then
@@ -886,11 +887,13 @@ case "$1" in
 				rm -f /tmp/devlist.json.get
 				[ -f /tmp/eventlist.json.get ] && eventlist
 				rm -f /tmp/eventlist.json.get
+				[ -z "$(find /tmp/devlist.last -mmin -$EVENTLIST_INTERVAL -exec echo lower \; 2>/dev/null)" ] && devlist
 				[ -z "$(find /tmp/eventlist.last -mmin -$EVENTLIST_INTERVAL -exec echo lower \; 2>/dev/null)" ] && eventlist
 				[ -f /tmp/objlist.json.get ] && objlistjson
 				rm -f /tmp/objlist.json.get
 				[ -f /tmp/deveventlist.json.get ] && eventlistjson
 				rm -f /tmp/deveventlist.json.get
+				[ -z "$(find /tmp/devlist.last -mmin -$COLLECTD_INTERVAL -exec echo lower \; 2>/dev/null)" ] && devlist
 				[ -z "$(find /tmp/collectd.last -mmin -$COLLECTD_INTERVAL -exec echo lower \; 2>/dev/null)" ] && collectd
 			;;
 		esac
