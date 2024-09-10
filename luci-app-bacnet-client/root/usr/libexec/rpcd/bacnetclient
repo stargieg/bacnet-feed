@@ -185,7 +185,24 @@ get_collectd_dev() {
 						i=1;while json_is_a ${i} array;do
 								json_select $i
 								json_get_var time 1
-								json_get_var timeval 2
+								if json_is_a 2 array ; then
+									json_select 2
+									json_get_var log_disabled 1
+									json_get_var buffer_purged 2
+									json_get_var log_interrupted 3
+									timeval= "Null"
+									json_select ..
+								else
+									json_get_var timeval 2
+								fi
+								if json_is_a 3 array ; then
+									json_select 3
+									json_get_var in_alarm 1
+									json_get_var fault 2
+									json_get_var overriden 3
+									json_get_var out_of_service 4
+									json_select ..
+								fi
 								if ! [ "$timeval" == "Null" ] ; then
 									case $ref_object_type in
 										binary*)
