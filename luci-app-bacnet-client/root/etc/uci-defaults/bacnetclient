@@ -1,6 +1,6 @@
 #!/bin/sh
 
-grep -q "bacnetclient call _cron" /etc/crontabs/root || echo "* * * * * pidof bacnetclient || /usr/libexec/rpcd/bacnetclient call _cron" >> /etc/crontabs/root
+grep -q "bacnetclient call _cron" /etc/crontabs/root || echo "* * * * * /usr/libexec/rpcd/bacnetclient call _cron" >> /etc/crontabs/root
 uci set luci_statistics.collectd_rrdtool.backup='1'
 uci set luci_statistics.collectd_unixsock.enable='1'
 uci del luci_statistics.collectd_rrdtool.RRATimespans
@@ -9,9 +9,3 @@ for i in '5min' '15min' '1hour' '3hour' '12hour' '1day' '3day' '1week' '3week' '
 done
 uci set luci_statistics.rrdtool.default_timespan='3hour'
 uci commit luci_statistics
-
-if ! grep -q "rsync -a /etc/luci-uploads/rrd /tmp/" /etc/rc.local ; then
-	echo "rsync -a /etc/luci-uploads/rrd /tmp/" > /tmp/rc.local
-	cat /etc/rc.local >> /tmp/rc.local
-	mv /tmp/rc.local /etc/rc.local
-fi
