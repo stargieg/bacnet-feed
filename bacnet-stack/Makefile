@@ -2,7 +2,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=bacnet-stack
 PKG_VERSION:=1.3.4
-PKG_RELEASE:=27
+PKG_RELEASE:=28
 #PKG_SOURCE_URL:=https://github.com/bacnet-stack/bacnet-stack.git
 PKG_SOURCE_URL:=https://github.com/stargieg/bacnet-stack-upstream.git
 PKG_SOURCE_PROTO:=git
@@ -82,6 +82,12 @@ $(call Package/bacnet-stack/Default)
   DEPENDS:=+libconfig
 endef
 
+define Package/bacnet-stack-router-mstp
+$(call Package/bacnet-stack/Default)
+  TITLE+= (ROUTER BIP MSTP)
+  VARIANT:=router-mstp
+endef
+
 define Package/bacnet-stack-router/description
   This package is built with Routing MSTP BIP support.
 endef
@@ -103,6 +109,7 @@ MAKE_VARS += CC="$(TARGET_CC)"
 MAKE_VARS += AR="$(TARGET_AR)"
 MAKE_VARS += CFLAGS="$(TARGET_CFLAGS)"
 MAKE_VARS += LDFLAGS="$(TARGET_LDFLAGS)"
+MAKE_VARS += OPTIMIZATION="-O3"
 
 ifeq ($(BUILD_VARIANT),server)
 MAKE_VARS += UCI=1
@@ -118,6 +125,12 @@ endif
 ifeq ($(BUILD_VARIANT),router)
 define Build/Compile
 	$(MAKE_VARS) $(MAKE) -C $(PKG_BUILD_DIR) router
+endef
+endif
+
+ifeq ($(BUILD_VARIANT),router-mstp)
+define Build/Compile
+	$(MAKE_VARS) $(MAKE) -C $(PKG_BUILD_DIR) router-mstp
 endef
 endif
 
@@ -226,6 +239,11 @@ define Package/bacnet-stack-router/install
 	$(INSTALL_BIN) ./files/bacrouter.init $(1)/etc/init.d/bacrouter
 endef
 
+define Package/bacnet-stack-router-mstp/install
+	$(INSTALL_DIR) $(1)/usr/sbin
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/bin/router-mstp $(1)/usr/sbin/bacrouter-mstp
+endef
+
 define Package/bacnet-stack-utils-arcnet/install
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/bin/* $(1)/usr/bin/
@@ -254,6 +272,7 @@ endef
 
 $(eval $(call BuildPackage,bacnet-stack-server))
 $(eval $(call BuildPackage,bacnet-stack-router))
+$(eval $(call BuildPackage,bacnet-stack-router-mstp))
 $(eval $(call BuildPackage,bacnet-stack-utils-arcnet))
 $(eval $(call BuildPackage,bacnet-stack-utils-bip))
 $(eval $(call BuildPackage,bacnet-stack-utils-bip6))
