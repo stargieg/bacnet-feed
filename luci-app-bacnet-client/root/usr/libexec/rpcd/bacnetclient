@@ -51,6 +51,7 @@ get_collectd_dev() {
 	for obj_id in $objs ; do
 		local mtime=$(date +"%s")
 		local ref_devid=""
+		local property=""
 		#197=logging-type -1=prio -1=index 9=APPLICATION_TAG_ENUMERATED 2=triggerd
 		bacwp $devid trend-log $obj_id 197 -1 -1 9 2 1>/dev/null 2>/dev/null
 		#205=Trigger -1=prio -1=index 1=APPLICATION_TAG_BOOLEAN 1=trigger record
@@ -60,7 +61,8 @@ get_collectd_dev() {
 		count="$(bacrp $devid trend-log $obj_id 141)"
 		[ "$?" == "0" ] || continue
 		count="$(echo $count | tr -d '\r')"
-		eval $(bacrp $devid trend-log $obj_id 132 | sed -e 's/.*(\(.*\), \(.*\)),\(.*\),\([0-9-]*\),.*/t=\1;tn=\2;p=\3;i=\4/')
+		property="$(bacrp $devid trend-log $obj_id 132)" || continue
+		eval $(echo "$property" | sed -e 's/.*(\(.*\), \(.*\)),\(.*\),\([0-9-]*\),.*/t=\1;tn=\2;p=\3;i=\4/')
 		[ "$i" == "-1" ] || ref_devid="$i"
 		ref_object_type="$t"
 		ref_object_instance="$tn"
@@ -509,7 +511,8 @@ get_eventlistjson() {
 get_devlist() {
 	local id="$1"
 	export BACNET_INVOKE_ID="$2"
-	$log "get_devlist $id $BACNET_INVOKE_ID"
+	BACNET_IP_PORT=$((BACNET_IP_PORT+BACNET_INVOKE_ID))
+	$log "get_devlist $id $BACNET_IP_PORT $BACNET_INVOKE_ID"
 	rm -f $tmpdir/devlist_$id.tmp
 	local tmpfile="$tmpdir/devlist_$id.json.tmp"
 	#77=object_name, 28=Description, 58=Location
@@ -524,6 +527,7 @@ get_objlist() {
 	local id="$1"
 	local invoke_id="$2"
 	export BACNET_INVOKE_ID="$invoke_id"
+	BACNET_IP_PORT=$((BACNET_IP_PORT+BACNET_INVOKE_ID))
 	local status="1"
 	bacrp $id device $id object-list > $tmpdir/obj$id.json.tmp
 	status=$?
@@ -649,9 +653,9 @@ devlist() {
 	touch $tmpdir/devlist.last
 	local invoke_id="203"
 	$log "devlist"
-	bacwi >$tmpdir/bacwi 2>/dev/null
+	bacwi >$tmpdir/address_cache 2>/dev/null
 	if [ "$?" == "0" ] ; then
-		devids="$(cat $tmpdir/bacwi | tr -d '\r' | grep -v ';' | cut -d ' ' -f 3)"
+		devids="$(cat $tmpdir/address_cache | tr -d '\r' | grep -v ';' | cut -d ' ' -f 3)"
 		for devid in $devids;do
 			deny=0
 			for deny_id in $BACNET_DENY_LIST ; do
@@ -660,12 +664,12 @@ devlist() {
 				fi
 			done
 			if [ "$deny" == "0" ] ; then
-				#while [ "$(pidof bacnetclient | wc -w)" -gt 2 ];do sleep 2;done
-				get_devlist "$devid" "$invoke_id" #&
+				while [ "$(pidof bacnetclient | wc -w)" -gt 20 ];do sleep 1;done
+				get_devlist "$devid" "$invoke_id" &
 				invoke_id=$(( invoke_id + 10 ))
 			fi
 		done
-		#while [ "$(pidof bacnetclient | wc -w)" -gt 2 ];do sleep 2;done
+		while [ "$(pidof bacnetclient | wc -w)" -gt 2 ];do sleep 2;done
 		json_init
 		json_add_array "list"
 		for devid in $devids;do
@@ -726,11 +730,11 @@ objlistjson() {
 	$log "objlistjson dev $ids"
 	local invoke_id=201
 	for id in $ids; do
-		#while [ "$(pidof bacnetclient | wc -w)" -gt 2 ];do sleep 2;done
-		get_objlist "$id" "$invoke_id" #&
+		while [ "$(pidof bacnetclient | wc -w)" -gt 20 ];do sleep 1;done
+		get_objlist "$id" "$invoke_id" &
 		invoke_id=$(( invoke_id + 10 ))
 	done
-	#while [ "$(pidof bacnetclient | wc -w)" -gt 2 ];do sleep 2;done
+	while [ "$(pidof bacnetclient | wc -w)" -gt 2 ];do sleep 2;done
 }
 
 write_objdesc() {
