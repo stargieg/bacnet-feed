@@ -151,7 +151,7 @@ return view.extend({
 		o.depends('bacdl', 'mstp');
 		o.optional = true;
 		o.rmempty = true;
-		o.datatype = "range(0,128)";
+		o.datatype = "range(0,127)";
 		o.placeholder = 1;
 		o = s.option(form.Value, "max_master", _("MAX Master for MSTP"), "127");
 		o.depends('bacdl', 'mstp');
@@ -159,13 +159,13 @@ return view.extend({
 		o.rmempty = true;
 		o.datatype = "range(0,127)";
 		o.placeholder = 127;
-		o = s.option(form.Value, "max_frames", _("MAX Frames for MSTP"), "1");
+		o = s.option(form.Value, "max_frames", _("MAX Frames for MSTP"), "128");
 		o.depends('bacdl', 'mstp');
 		o.optional = true;
 		o.rmempty = true;
 		o.datatype = "range(0,128)";
 		o.modalonly = true;
-		o.placeholder = 1;
+		o.placeholder = 128;
 		o = s.option(form.ListValue, "baud", _("Datarate"), "38400");
 		o.depends('bacdl', 'mstp');
 		o.value("9600");
