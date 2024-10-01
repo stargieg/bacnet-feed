@@ -1,7 +1,23 @@
 'use strict';
+'require rpc';
 'require view';
 'require form';
 'require tools.widgets as widgets';
+
+var callFileList = rpc.declare({
+	object: 'file',
+	method: 'list',
+	params: [ 'path' ],
+	expect: { entries: [] },
+	filter: function(list, params) {
+		var rv = [];
+		for (var i = 0; i < list.length; i++)
+			if (list[i].name.match(/^ttyUSB/) || list[i].name.match(/^ttyS/) || list[i].name.match(/^ttyACM/))
+				rv.push(params.path + list[i].name);
+		return rv.sort();
+	}
+});
+
 
 return view.extend({
 	render: function() {
@@ -48,9 +64,18 @@ return view.extend({
 		o.depends('bacdl', 'ethernet');
 		o.datatype = "string";
 		o = s.option(form.Value, "serial", _("Serial Port"), _("The Serial Port bacnet should serve. /dev/ttyUSB0"));
+		o.ucioption = 'iface';
 		o.depends('bacdl', 'mstp');
 		o.datatype = "string";
 		o.placeholder = "/dev/ttyUSB0";
+		o.load = function(section_id) {
+			return callFileList('/dev/').then(L.bind(function(devices) {
+				for (var i = 0; i < devices.length; i++)
+					this.value(devices[i]);
+				return form.Value.prototype.load.apply(this, [section_id]);
+			}, this));
+		};
+
 		o = s.option(form.Value, "port", _("IP Port"), "47808");
 		o.depends('bacdl', 'bip');
 		o.depends('bacdl', 'bip6');
@@ -128,12 +153,12 @@ return view.extend({
 		o.rmempty = true;
 		o.datatype = "range(0,128)";
 		o.placeholder = 1;
-		o = s.option(form.Value, "max_master", _("MAX Master for MSTP"), "128");
+		o = s.option(form.Value, "max_master", _("MAX Master for MSTP"), "127");
 		o.depends('bacdl', 'mstp');
 		o.optional = true;
 		o.rmempty = true;
-		o.datatype = "range(0,128)";
-		o.placeholder = 128;
+		o.datatype = "range(0,127)";
+		o.placeholder = 127;
 		o = s.option(form.Value, "max_frames", _("MAX Frames for MSTP"), "1");
 		o.depends('bacdl', 'mstp');
 		o.optional = true;
