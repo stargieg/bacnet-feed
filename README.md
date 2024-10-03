@@ -79,7 +79,7 @@ cat << EOF >> repositories.conf
 src/gz bacnet http://feeds.lunatiki.de/bacnet/releases/23.05.5/mips_24kc
 EOF
 wget -O keys/152ccf91cd6bfbdd http://feeds.lunatiki.de/bacnet/releases/23.05.5/mips_24kc/152ccf91cd6bfbdd
-make image PROFILE="glinet_gl-mifi" PACKAGES="bacnet-program-pid"
+make image PROFILE="glinet_gl-mifi" PACKAGES="luci-app-bacrouter"
 ```
 After the build is finished, the generated firmware files are placed in the bin/targets directories inside the directory you extracted the IB into.
 
