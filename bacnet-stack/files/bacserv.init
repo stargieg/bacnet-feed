@@ -9,14 +9,18 @@ start_dev() {
 	local cfg=$1
 	config_get enable $cfg enable "0"
 	[ "$enable" == "1" ] || return
-    chgrp daemon /etc/config         
+    chgrp daemon /etc/config
     chmod 770 /etc/config
 	chgrp daemon /etc/config/bacnet_*
 	chmod 660 /etc/config/bacnet_*
 	mkdir -p /tmp/.uci
 	chgrp daemon /tmp/.uci
 	chmod 770 /tmp/.uci
+    chgrp daemon /etc/ssl/bacnet
+    chmod 770 /etc/ssl/bacnet
 	procd_open_instance
+	chgrp daemon /etc/ssl/bacnet/*
+	chmod 660 /etc/ssl/bacnet/*
 	#the address_cache is in daemon's home dir /var
 	#/var/address_cache
 	#TODO generate static mstp mapping from uci

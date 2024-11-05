@@ -1,0 +1,36 @@
+diff --git a/ports/linux/websocket-cli.c b/ports/linux/websocket-cli.c
+index e5d9bc1d..cba7ae93 100644
+--- a/ports/linux/websocket-cli.c
++++ b/ports/linux/websocket-cli.c
+@@ -67,6 +67,7 @@ static int bws_cli_websocket_event(
+ static const char *bws_hub_protocol = BSC_WEBSOCKET_HUB_PROTOCOL_STR;
+ static const char *bws_direct_protocol = BSC_WEBSOCKET_DIRECT_PROTOCOL_STR;
+ 
++#define PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP {{PTHREAD_MUTEX_RECURSIVE}}
+ static pthread_mutex_t bws_cli_mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+ 
+ /* Websockets protocol defined in BACnet/SC \S AB.7.1.  */
+diff --git a/ports/linux/websocket-global.c b/ports/linux/websocket-global.c
+index 1ed0c91c..86f8d0ca 100644
+--- a/ports/linux/websocket-global.c
++++ b/ports/linux/websocket-global.c
+@@ -19,6 +19,7 @@
+     "Libwebsockets must be built with LWS_MAX_SMP > 1 (otherwise it does not support thread synchronization in correct way)"
+ #endif
+ 
++#define PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP {{PTHREAD_MUTEX_RECURSIVE}}
+ static pthread_mutex_t websocket_mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+ static pthread_mutex_t websocket_dispatch_mutex =
+     PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+diff --git a/ports/linux/websocket-srv.c b/ports/linux/websocket-srv.c
+index f9afdb24..52955bf1 100644
+--- a/ports/linux/websocket-srv.c
++++ b/ports/linux/websocket-srv.c
+@@ -65,6 +65,7 @@ typedef struct {
+ #error "BSC_CONF_WEBSOCKET_SERVERS_NUM must be >= 1"
+ #endif
+ 
++#define PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP {{PTHREAD_MUTEX_RECURSIVE}}
+ static pthread_mutex_t bws_global_mutex =
+     PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+ static pthread_mutex_t bws_srv_direct_mutex[BSC_CONF_WEBSOCKET_SERVERS_NUM];
