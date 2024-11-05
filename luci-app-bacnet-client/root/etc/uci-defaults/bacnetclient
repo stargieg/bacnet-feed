@@ -9,3 +9,4 @@ for i in '5min' '15min' '1hour' '3hour' '12hour' '1day' '3day' '1week' '3week' '
 done
 uci set luci_statistics.rrdtool.default_timespan='3hour'
 uci commit luci_statistics
+/etc/init.d/luci_statistics restart

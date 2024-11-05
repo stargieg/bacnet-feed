@@ -653,9 +653,9 @@ devlist() {
 	touch $tmpdir/devlist.last
 	local invoke_id="203"
 	$log "devlist"
-	bacwi >$tmpdir/address_cache 2>/dev/null
+	bacwi >$tmpdir/$address_cache
 	if [ "$?" == "0" ] ; then
-		devids="$(cat $tmpdir/address_cache | tr -d '\r' | grep -v ';' | cut -d ' ' -f 3)"
+		devids="$(cat $tmpdir/$address_cache | tr -d '\r' | grep -v ';' | cut -d ' ' -f 3)"
 		for devid in $devids;do
 			deny=0
 			for deny_id in $BACNET_DENY_LIST ; do
@@ -782,9 +782,24 @@ write_ackalarm() {
 
 get_config() {
 	config_load bacnetclient
+	config_get bacdl default bacdl "bip"
+	[ -z "$bacdl" ] || export BACNET_DATALINK="$bacdl"
 	config_get iface default iface "br-lan"
 	[ -z "$iface" ] || export BACNET_IFACE="$iface"
-	config_get port default port
+	address_cache="address_cache"
+	if [ "$bacdl" == "bip6" ] ; then
+		config_get broadcast default broadcast "65294"
+		[ -z "$broadcast" ] || export BACNET_BIP6_BROADCAST="$broadcast"
+		#BUG in ip6 address_cache
+		address_cache="address_cache_bip6"
+	fi
+	if [ "$bacdl" == "mstp" ] ; then
+		config_get timeout default timeout "1000"
+	else
+		config_get timeout default timeout "60"
+	fi
+	export BACNET_APDU_TIMEOUT="$timeout"
+	config_get bbmd_addr default bbmd_addr
 	[ -z "$port" ] || export BACNET_IP_PORT="$port"
 	config_get bbmd_addr default bbmd_addr
 	[ -z "$bbmd_addr" ] || export BACNET_BBMD_ADDRESS="$bbmd_addr"
@@ -811,8 +826,11 @@ get_config() {
 	[ -z "$collectd_interval" ] && collectd_interval=10
 	export COLLECTD_INTERVAL="$collectd_interval"
 	config_get debug default debug
-	[ -z "$debug" ] || export BACNET_DEBUG="0"
-	export BACNET_DEBUG="$debug"
+	if ! [ -z "$debug" ] ; then 
+		export BACNET_DEBUG="$debug"
+		export BACNET_IP_DEBUG="$debug"                                                                                     
+		export BACNET_BIP6_DEBUG="$debug"
+	fi
 	config_get eventlist_interval default eventlist_interval
 	[ -z "$eventlist_interval" ] && eventlist_interval=5
 	export EVENTLIST_INTERVAL="$eventlist_interval"

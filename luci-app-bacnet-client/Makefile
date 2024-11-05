@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-bacnet-client
-PKG_VERSION:=0.2.5
+PKG_VERSION:=0.2.6
 PKG_RELEASE:=6
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
 
@@ -12,7 +12,7 @@ define Package/luci-app-bacnet-client
   CATEGORY:=LuCI
   SUBMENU:=3. Applications
   TITLE:=Bacnet Device
-  EXTRA_DEPENDS:=luci-mod-admin-full, msmtp, luci-app-statistics, collectd-mod-unixsock, socat
+  EXTRA_DEPENDS:=luci-mod-admin-full, msmtp, luci-app-statistics, collectd-mod-unixsock, socat, bacnet-stack-utils-base
 endef
 
 define Build/Prepare
