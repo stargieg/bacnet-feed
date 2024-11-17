@@ -1,0 +1,13 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index bfb31ced..1e401b0f 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -680,6 +680,8 @@ target_compile_definitions(
+ 
+ if(BACDL_BSC)
+   target_link_libraries(${PROJECT_NAME} PUBLIC Threads::Threads ${LIB_WEBSOCKETS_LIBRARIES} )
++  add_compile_definitions(BSC_DEBUG_WEBSOCKET_MUTEX_ENABLED)
++  add_compile_definitions(BACFILE)
+ else()
+   target_link_libraries(${PROJECT_NAME} PUBLIC Threads::Threads)
+ endif()

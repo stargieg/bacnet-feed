@@ -17,8 +17,12 @@ src-git bacnet https://github.com/stargieg/bacnet-feed.git
 
 To install all its package definitions, run:
 ```
+grep " packages" feeds.conf.default > feeds.conf
+echo "src-git bacnet https://github.com/stargieg/bacnet-feed.git >> feeds.conf
+./scripts/feeds update packages
 ./scripts/feeds update bacnet
 ./scripts/feeds install -a -p bacnet
+./scripts/feeds uninstall libwebsockets 2>/dev/null
 ```
 
 ### Usage of OpenWRT SDK
@@ -32,10 +36,11 @@ wget https://downloads.openwrt.org/releases/23.05.5/targets/ath79/generic/openwr
 tar -x -f openwrt-sdk-23.05.5-ath79-generic_gcc-12.3.0_musl.Linux-x86_64.tar.xz
 cd openwrt-sdk-23.05.5-ath79-generic_gcc-12.3.0_musl.Linux-x86_64
 grep " base" feeds.conf.default > feeds.conf
-grep " packages" feeds.conf.default > feeds.conf
+grep " packages" feeds.conf.default >> feeds.conf
 echo "src-git bacnet https://github.com/stargieg/bacnet-feed.git" >> feeds.conf
 ./scripts/feeds update
-./scripts/feeds install -a
+./scripts/feeds install -a -p bacnet
+./scripts/feeds uninstall libwebsockets 2>/dev/null
 cat << EOF > .config
 # CONFIG_ALL_NONSHARED is not set
 # CONFIG_ALL_KMODS is not set
@@ -55,10 +60,19 @@ CONFIG_PACKAGE_luci-app-bacserver=m
 CONFIG_PACKAGE_bacnet-stack-router=m
 CONFIG_PACKAGE_bacnet-stack-router-mstp=m
 CONFIG_PACKAGE_luci-app-bacrouter=m
+CONFIG_PACKAGE_bacnet-stack-sc-hub=m
+# CONFIG_PACKAGE_libwebsockets-mbedtls-full is not set
+# CONFIG_PACKAGE_libwebsockets-mbedtls-small is not set
+CONFIG_PACKAGE_libwebsockets-openssl-full=m
+# CONFIG_PACKAGE_libwebsockets-openssl-small is not set
 EOF
 make defconfig
-make package/feeds/bacnet/bacnet-stack/clean
 make package/feeds/bacnet/bacnet-stack/compile
+make package/feeds/bacnet/bacnet-stack-server/compile
+make package/feeds/bacnet/bacnet-stack-router/compile
+make package/feeds/bacnet/bacnet-stack-router-mstp/compile
+make package/feeds/bacnet/bacnet-stack-router-ipv6/compile
+make package/feeds/bacnet/bacnet-stack-sc-hub/compile
 make package/feeds/bacnet/luci-app-bacrouter/compile
 make package/feeds/bacnet/luci-app-bacnet-client/compile
 make package/feeds/bacnet/luci-app-bacserver/compile
@@ -117,7 +131,7 @@ echo 'src/gz bacnet http://feeds.lunatiki.de/bacnet/releases/23.05.5/i386_pentiu
 Install demo apps, server or router
 ```
 opkg update
-opkg install bacnet-stack-utils-bip
+opkg install bacnet-stack-utils-base
 # or
 opkg install luci-app-bacserver
 # or

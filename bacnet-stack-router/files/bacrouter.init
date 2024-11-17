@@ -1,0 +1,85 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2013 Patrick Grimm
+
+START=60
+USE_PROCD=1
+SERVER_BIN="/usr/sbin/bacrouter"
+CFGFILE="/tmp/bacrouter.cfg"
+
+cfghead() {
+	echo "ports =" > "$CFGFILE"
+	echo "(" >> "$CFGFILE"
+}
+
+cfgfoot() {
+        echo "" >> "$CFGFILE"
+        echo ");" >> "$CFGFILE"
+}
+start_dev() {
+	local cfg=$1
+	config_get enable $cfg enable "0"
+	[ "$enable" == "1" ] || return
+	config_get bacdl $cfg bacdl "bip"
+	config_get iface $cfg iface "lan"
+	network_get_device ifname "$iface"
+	if [ "$bacdl" == "bip" ] ; then
+		config_get iface $cfg iface "lan"
+		network_get_device ifname "$iface"
+		echo "$SEP" >> "$CFGFILE"
+		echo "{" >> "$CFGFILE"
+		echo 'device_type = "'$bacdl'";' >> "$CFGFILE"
+		echo 'device = "'$ifname'";' >> "$CFGFILE"
+		config_get net $cfg net "1"
+		echo 'network = '$net';' >> "$CFGFILE"
+		config_get port $cfg port "47808"
+		echo 'port = '$port';' >> "$CFGFILE"
+	elif [ "$bacdl" == "mstp" ] ; then
+		config_get serial $cfg serial "/dev/ttyUSB0"
+		echo "$SEP" >> "$CFGFILE"
+                echo "{" >> "$CFGFILE"
+                echo 'device_type = "'$bacdl'";' >> "$CFGFILE"
+                echo 'device = "'$serial'";' >> "$CFGFILE"
+		config_get net $cfg net "6661"
+		echo 'network = '$net';' >> "$CFGFILE"
+		config_get mac $cfg mac "1"
+		echo 'mac = '$mac';' >> "$CFGFILE"
+		config_get max_master $cfg max_master "127"
+		echo 'max_master = '$max_master';' >> "$CFGFILE"
+		config_get max_frames $cfg max_frames "1"
+		echo 'max_frames = '$max_frames';' >> "$CFGFILE"
+		config_get baud $cfg baud "38400"
+		echo 'baud = '$baud';' >> "$CFGFILE"
+		config_get parity_bit $cfg parity_bit "N"
+		echo 'parity = "'$parity'";' >> "$CFGFILE"
+		config_get data_bit $cfg data_bit "8"
+		echo 'data_bits = '$data_bit';' >> "$CFGFILE"
+		config_get stop_bit $cfg stopbits "1"
+		echo 'stop_bits = '$stop_bit';' >> "$CFGFILE"
+	fi
+	echo -n "}" >> "$CFGFILE"
+	SEP=","
+}
+
+start_service() {
+	. /lib/functions/network.sh
+	config_load bacrouter
+	procd_open_instance
+	procd_set_param command "$SERVER_BIN"
+	cfghead
+	SEP=""
+	config_foreach start_dev dev
+	cfgfoot
+	procd_append_param command -c "$CFGFILE"
+	procd_set_param respawn
+	procd_set_param stderr 1
+	procd_open_trigger
+	procd_add_raw_trigger "interface.*" 2000 /etc/init.d/bacrouter restart
+	config_files="network bacrouter"
+	for file in $config_files ; do
+		if [ -f "/etc/config/$file" ] ; then
+			procd_add_config_trigger "config.change" "$file" /etc/init.d/bacrouter restart
+		fi
+	done
+	procd_close_trigger
+	procd_close_instance
+}
