@@ -1,13 +1,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=bacnet-stack-server
-PKG_VERSION:=1.3.8
 PKG_RELEASE:=1
 PKG_SOURCE_URL:=https://github.com/stargieg/bacnet-stack-upstream.git
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_DATE:=2024-11-03
-PKG_SOURCE_VERSION:=server-uci
-PKG_MIRROR_HASH:=skip
+PKG_SOURCE_DATE:=2024-11-07
+PKG_SOURCE_VERSION:=5376305
+PKG_MIRROR_HASH:=2af308418d7a783b6ba697375003455d8a653c42329c78fb8ab6ee58d88a48c8
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
