@@ -12,7 +12,6 @@
 set -o pipefail
 tmpdir="/tmp/bac"
 mkdir -p "$tmpdir"
-cd "$tmpdir"
 
 get_collectd_dev() {
 	local devid="$1"
@@ -435,19 +434,36 @@ get_eventlist() {
 	support="$(echo $support | cut -d ',' -f4)"
 	! [ "$support" == "true" ] && $log "device $id no true protocol-services-supported $support" && return
 	$log "get_eventlist $id"
-	bacge $id > $tmpdir/eventlist_$id.txt
+	#BUG in bacge with /tmp/address_cache and BBMD_ADDRESS
+	if [ -n "$BACNET_BBMD_ADDRESS" ]; then
+		 ( mkdir -p /tmp/bacge ; cd /tmp/bacge ; bacge $id > $tmpdir/eventlist_$id.txt )
+	else
+		bacge $id > $tmpdir/eventlist_$id.txt
+	fi
 	if ! [ "$?" == "0" ] ; then
 		sleep 2
 		$log "device $id no bacge retry 1"
-		bacge $id > $tmpdir/eventlist_$id.txt
+		if [ -n "$BACNET_BBMD_ADDRESS" ]; then
+			( mkdir -p /tmp/bacge ; cd /tmp/bacge ; bacge $id > $tmpdir/eventlist_$id.txt )
+		else
+			bacge $id > $tmpdir/eventlist_$id.txt
+		fi
 		if ! [ "$?" == "0" ] ; then
 			sleep 2
 			$log "device $id no bacge retry 2"
-			bacge $id > $tmpdir/eventlist_$id.txt
+			if [ -n "$BACNET_BBMD_ADDRESS" ]; then
+				( mkdir -p /tmp/bacge ; cd /tmp/bacge ; bacge $id > $tmpdir/eventlist_$id.txt )
+			else
+				bacge $id > $tmpdir/eventlist_$id.txt
+			fi
 			if ! [ "$?" == "0" ] ; then
 				sleep 2
 				$log "device $id no bacge retry 3"
-				bacge $id > $tmpdir/eventlist_$id.txt
+				if [ -n "$BACNET_BBMD_ADDRESS" ]; then
+					( mkdir -p /tmp/bacge ; cd /tmp/bacge ; bacge $id > $tmpdir/eventlist_$id.txt )
+				else
+					bacge $id > $tmpdir/eventlist_$id.txt
+				fi
 				! [ "$?" == "0" ] && $log "device $id no bacge" && return
 			fi
 		fi
@@ -511,7 +527,7 @@ get_eventlistjson() {
 get_devlist() {
 	local id="$1"
 	export BACNET_INVOKE_ID="$2"
-	BACNET_IP_PORT=$((BACNET_IP_PORT+BACNET_INVOKE_ID))
+	export BACNET_IP_PORT=$((BACNET_IP_PORT+BACNET_INVOKE_ID))
 	$log "get_devlist $id $BACNET_IP_PORT $BACNET_INVOKE_ID"
 	rm -f $tmpdir/devlist_$id.tmp
 	local tmpfile="$tmpdir/devlist_$id.json.tmp"
@@ -525,9 +541,8 @@ get_devlist() {
 
 get_objlist() {
 	local id="$1"
-	local invoke_id="$2"
-	export BACNET_INVOKE_ID="$invoke_id"
-	BACNET_IP_PORT=$((BACNET_IP_PORT+BACNET_INVOKE_ID))
+	export BACNET_INVOKE_ID="$2"
+	export BACNET_IP_PORT=$((BACNET_IP_PORT+BACNET_INVOKE_ID))
 	local status="1"
 	bacrp $id device $id object-list > $tmpdir/obj$id.json.tmp
 	status=$?
@@ -653,7 +668,13 @@ devlist() {
 	touch $tmpdir/devlist.last
 	local invoke_id="203"
 	$log "devlist"
-	bacwi >$tmpdir/$address_cache
+	if [ -z "$BACNET_BBMD_ADDRESS" ]; then
+		( export BACNET_IP_PORT="$dst_port" ; bacwi | grep -A4194303 '^;Device' >$tmpdir/$address_cache )
+	else
+		bacwi | grep -A4194303 '^;Device' >$tmpdir/$address_cache
+	fi
+	cp $tmpdir/$address_cache $address_cache
+	cp $tmpdir/$address_cache /tmp/$address_cache
 	if [ "$?" == "0" ] ; then
 		devids="$(cat $tmpdir/$address_cache | tr -d '\r' | grep -v ';' | cut -d ' ' -f 3)"
 		for devid in $devids;do
@@ -799,8 +820,10 @@ get_config() {
 		config_get timeout default timeout "60"
 	fi
 	export BACNET_APDU_TIMEOUT="$timeout"
-	config_get bbmd_addr default bbmd_addr
-	[ -z "$port" ] || export BACNET_IP_PORT="$port"
+	config_get port default port "47808"
+	dst_port="$port"
+	config_get src_port default src_port "50000"
+	export BACNET_IP_PORT="$src_port"
 	config_get bbmd_addr default bbmd_addr
 	[ -z "$bbmd_addr" ] || export BACNET_BBMD_ADDRESS="$bbmd_addr"
 	config_get bbmd_port default bbmd_port
@@ -810,29 +833,23 @@ get_config() {
 	[ -z "$deny_list" ] || export BACNET_DENY_LIST="$deny_list"
 	config_get deny_list_log default deny_list_log
 	[ -z "$deny_list_log" ] || export BACNET_DENY_LIST_LOG="$deny_list_log"
-	config_get delimeter_name default delimeter_name
-	[ -z "$delimeter_name" ] && delimeter_name=":"
+	config_get delimeter_name default delimeter_name ":"
 	export BACNET_DELIMETER_NAME="$delimeter_name"
-	config_get delimeter_desc default delimeter_desc
-	[ -z "$delimeter_desc" ] && delimeter_desc="_"
+	config_get delimeter_desc default delimeter_desc "_"
 	export BACNET_DELIMETER_DESC="$delimeter_desc"
-	config_get delimeter_group_name_count default delimeter_group_name_count
-	[ -z "$delimeter_group_name_count" ] && delimeter_group_name_count=1
+	config_get delimeter_group_name_count default delimeter_group_name_count 1
 	export BACNET_DELIMETER_GROUP_NAME_COUNT="$delimeter_group_name_count"
-	config_get delimeter_group_desc_count default delimeter_group_desc_count
-	[ -z "$delimeter_group_desc_count" ] && delimeter_group_desc_count=2
+	config_get delimeter_group_desc_count default delimeter_group_desc_count 2
 	export BACNET_DELIMETER_GROUP_DESC_COUNT="$delimeter_group_desc_count"
-	config_get collectd_interval default collectd_interval
-	[ -z "$collectd_interval" ] && collectd_interval=10
+	config_get collectd_interval default collectd_interval 10
 	export COLLECTD_INTERVAL="$collectd_interval"
-	config_get debug default debug
-	if ! [ -z "$debug" ] ; then 
+	config_get debug default debug 0
+	if [ "$debug" -ne "0" ] ; then
 		export BACNET_DEBUG="$debug"
 		export BACNET_IP_DEBUG="$debug"                                                                                     
 		export BACNET_BIP6_DEBUG="$debug"
 	fi
-	config_get eventlist_interval default eventlist_interval
-	[ -z "$eventlist_interval" ] && eventlist_interval=5
+	config_get eventlist_interval default eventlist_interval 5
 	export EVENTLIST_INTERVAL="$eventlist_interval"
 	if [ -f /usr/bin/msmtp ] ; then
 		config_get mail default mail
@@ -848,8 +865,7 @@ get_config() {
 			[ -z "$mail_bcc" ] || export BACNET_MAIL_BCC="$mail_bcC"
 			config_get mail_server default mail_server
 			[ -z "$mail_server" ] || export BACNET_MAIL_SERVER="$mail_server"
-			config_get mail_port default mail_port
-			[ -z "$mail_port" ] && mail_port=587
+			config_get mail_port default mail_port 587
 			export BACNET_MAIL_PORT="$mail_port"
 			config_get mail_user default mail_user
 			[ -z "$mail_user" ] || export BACNET_MAIL_USER="$mail_user"
