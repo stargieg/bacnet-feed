@@ -68,24 +68,26 @@ function createTable(data) {
 			event_time_stamp_normal = "";
 			ack_normal = "";
 		}
+		let devname =
+			E('p', { 'style': 'word-break: keep-all' }, row.devname);
 
 		tableData.push([
-            row.idx,
-            row.devid,
-            row.devname,
-            row.devdesc,
-            row.devloc,
-            row.object_name,
-            row.Description,
+			row.idx,
+			row.devid,
+			devname,
+			row.devdesc,
+			row.devloc,
+			row.object_name,
+			row.Description,
 			row.event_state,
 			row.value,
 			event_time_stamp,
 			ack,
 			event_time_stamp_normal,
 			ack_normal
-        ])
-    });
-    return tableData;
+		])
+	});
+	return tableData;
 };
 
 return view.extend({
@@ -113,14 +115,14 @@ return view.extend({
 			E('th', { 'class': 'th left' }, [ 'Normal Datum Uhrzeit' ]),
 			E('th', { 'class': 'th left' }, [ 'Quit' ])
 		]));
-        poll.add(() => {
-            Promise.all([
+		poll.add(() => {
+			Promise.all([
 				callgetData()
-            ]).then((results) => {
-                cbi_update_table(tr, createTable(results[0]));
-            })
-        }, 10);
-        return tr
+			]).then((results) => {
+				cbi_update_table(tr, createTable(results[0]));
+			})
+		}, 10);
+		return tr
 
 	}
 

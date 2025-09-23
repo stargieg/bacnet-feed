@@ -21,8 +21,8 @@ var callsetDataLoc = rpc.declare({
 });
 
 function createTable(data) {
-    let tableData = [];
-    data.list.forEach(row => {
+	let tableData = [];
+	data.list.forEach(row => {
 		let dp =
 			E('span', { 'class': 'control-group' }, [
 				E('button', {
@@ -34,6 +34,8 @@ function createTable(data) {
 				},
 				_('Datenpunkte')),
 			]);
+		let object_name =
+			E('h5', { 'style': 'word-break: keep-all' }, row.object_name);
 		let description =
 			E('input', {
 				'class': 'cbi-input-text',
@@ -75,16 +77,16 @@ function createTable(data) {
 				_('Speichern')),
 			]);
 		tableData.push([
-            dp,
-            row.devid,
-            row.object_name,
-            description,
-            description_apply,
-            location,
-            location_apply
-        ])
-    });
-    return tableData;
+			dp,
+			row.devid,
+			object_name,
+			description,
+			description_apply,
+			location,
+			location_apply
+		])
+	});
+	return tableData;
 };
 
 return view.extend({
@@ -98,22 +100,22 @@ return view.extend({
 
 		var tr = E('table', { 'class': 'table' });
 		tr.appendChild(E('tr', { 'class': 'tr cbi-section-table-titles' }, [
-			E('th', { 'class': 'th left' }, [ 'Datenpunkte' ]),
-			E('th', { 'class': 'th left' }, [ 'ID' ]),
-			E('th', { 'class': 'th left' }, [ 'Name' ]),
-			E('th', { 'class': 'th left' }, [ 'Beschreibung' ]),
-			E('th', { 'class': 'th left' }, [ 'Speichern' ]),
-			E('th', { 'class': 'th left' }, [ 'Ort' ]),
-			E('th', { 'class': 'th left' }, [ 'Speichern' ])
+			E('th', { 'class': 'th left cbi-section-actions' }, [ '\u00a0' ]),
+			E('th', { 'class': 'th col-2 left version' }, [ 'ID' ]),
+			E('th', { 'class': 'th col-2 left', 'style': 'word-break: keep-all' }, [ 'Name' ]),
+			E('th', { 'class': 'th col-10 left' }, [ 'Beschreibung' ]),
+			E('th', { 'class': 'th left cbi-section-actions' }, [ '\u00a0' ]),
+			E('th', { 'class': 'th col-10 left' }, [ 'Ort' ]),
+			E('th', { 'class': 'th left cbi-section-actions' }, [ '\u00a0' ])
 		]));
-        poll.add(() => {
-            Promise.all([
+		poll.add(() => {
+			Promise.all([
 				callgetData()
-            ]).then((results) => {
-                cbi_update_table(tr, createTable(results[0]));
-            })
-        }, 10);
-        return tr
+			]).then((results) => {
+				cbi_update_table(tr, createTable(results[0]));
+			})
+		}, 10);
+		return tr
 
 	}
 
