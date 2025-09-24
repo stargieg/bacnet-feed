@@ -18,6 +18,7 @@ get_collectd_dev() {
 	local SocketFile="$2"
 	local DataDir="$3"
 	export BACNET_INVOKE_ID="$4"
+	local ret_cont="0"
 	objs=""
 	while read line; do
 		eval $(jsonfilter -s "$line" -e 'object_instance=@.trend_log')
@@ -27,15 +28,16 @@ get_collectd_dev() {
 		#touch $tmpdir/objlist.json.get 2>/dev/null
 		#touch $tmpdir/objlist_$devid.json.get 2>/dev/null
 		#log "collectd no objs touch $tmpdir/objlist_$devid.json.get"
-		#$log "collectd no objs $BACNET_IFACE $BACNET_IP_PORT $BACNET_BBMD_ADDRESS $BACNET_BBMD_PORT $devid $BACNET_INVOKE_ID"
+		$log "collectd no objs $BACNET_IFACE $BACNET_IP_PORT $BACNET_BBMD_ADDRESS $BACNET_BBMD_PORT $devid $BACNET_INVOKE_ID"
 		return
 	fi
 	$log "get_collectd_dev $BACNET_IFACE $BACNET_IP_PORT $BACNET_BBMD_ADDRESS $BACNET_BBMD_PORT $devid $BACNET_INVOKE_ID"
-	dev_name="$(bacrp $devid device $devid object-name)"
-	[ "$?" == "0" ] || return
+	dev_name="$(bacrp $devid device $devid object-name)" || ret_cont=1
+	[ "$ret_cont" == "1" ] && $log_err "collectd dev: $devid no dev_name"
+	[ "$ret_cont" == "1" ] && return
 	dev_name="$(echo $dev_name | tr -d '\r' | tr -s ' ' '_' | sed 's/\ä/ae/g;s/\Ä/Ae/g;s/\ö/oe/g;s/\Ö/Oe/g;s/\ü/ue/g;s/\Ü/Ue/g;s/\ß/ss/g')"
+	[ -z "$dev_name" ] && $log_err "collectd dev: $devid no dev_name"
 	[ -z "$dev_name" ] && return
-	$log "get_collectd_dev dev: $devid dev_name: $dev_name objs:$objs"
 
 	config_load bacnetclient
 	config_get delimeter_name "$devid" delimeter_name
@@ -51,17 +53,25 @@ get_collectd_dev() {
 		local mtime=$(date +"%s")
 		local ref_devid=""
 		local property=""
+		local count=""
+		local ret=""
+		local ret_cont="0"
+		local new="0"
 		#197=logging-type -1=prio -1=index 9=APPLICATION_TAG_ENUMERATED 2=triggerd
-		bacwp $devid trend-log $obj_id 197 -1 -1 9 2 1>/dev/null 2>/dev/null
+		ret="$(bacwp $devid trend-log $obj_id 197 -1 -1 9 1)" || $log "$ret"
 		#205=Trigger -1=prio -1=index 1=APPLICATION_TAG_BOOLEAN 1=trigger record
-		bacwp $devid trend-log $obj_id 205 -1 -1 1 1 1>/dev/null 2>/dev/null
+		ret="$(bacwp $devid trend-log $obj_id 205 -1 -1 1 1)" || $log "$ret"
 		#197=logging-type -1=prio -1=index 9=APPLICATION_TAG_ENUMERATED 1=cov record (0=polled)
-		bacwp $devid trend-log $obj_id 197 -1 -1 9 1 1>/dev/null 2>/dev/null
-		count="$(bacrp $devid trend-log $obj_id 141)"
-		[ "$?" == "0" ] || continue
-		count="$(echo $count | tr -d '\r')"
-		property="$(bacrp $devid trend-log $obj_id 132)" || continue
-		eval $(echo "$property" | sed -e 's/.*(\(.*\), \(.*\)),\(.*\),\([0-9-]*\),.*/t=\1;tn=\2;p=\3;i=\4/')
+		ret="$(bacwp $devid trend-log $obj_id 197 -1 -1 9 1)" || $log "$ret"
+		count="$(bacrp $devid trend-log $obj_id 141)" || ret_cont=1
+		[ "$ret_cont" == "1" ] && $log_err "count $count"
+		[ "$ret_cont" == "1" ] && continue
+		property="$(bacrp $devid trend-log $obj_id 132)" || ret_cont=1
+		[ "$ret_cont" == "1" ] && $log_err "property $property"
+		[ "$ret_cont" == "1" ] && continue
+		eval $(echo "$property" | sed -e 's/.*(\(.*\), \(.*\)),\(.*\),\([0-9-]*\),.*/t=\1;tn=\2;p=\3;i=\4/') || ret_cont=1
+		[ "$ret_cont" == "1" ] && $log_err "no property"
+		[ "$ret_cont" == "1" ] && continue
 		[ "$i" == "-1" ] || ref_devid="$i"
 		ref_object_type="$t"
 		ref_object_instance="$tn"
@@ -70,9 +80,11 @@ get_collectd_dev() {
 			ref_devid="$devid"
 			ref_dev_name="$dev_name"
 		else
-			ref_dev_name="$(bacrp $ref_devid device $ref_devid object-name)"
-			[ "$?" == "0" ] || continue
+			ref_dev_name="$(bacrp $ref_devid device $ref_devid object-name)" || ret_cont=1
+			[ "$ret_cont" == "1" ] && $log_err "ref_dev_name $ref_dev_name"
+			[ "$ret_cont" == "1" ] && continue
 			ref_dev_name="$(echo $ref_dev_name | tr -d '\r' | tr -s ' ' '_' | sed -e 's/\ä/ae/g;s/\Ä/Ae/g;s/\ö/oe/g;s/\Ö/Oe/g;s/\ü/ue/g;s/\Ü/Ue/g;s/\ß/ss/g')"
+			[ -z "$ref_dev_name" ] && $log_err "no ref_dev_name"
 			[ -z "$ref_dev_name" ] && continue
 		fi
 		ret=0
@@ -127,10 +139,9 @@ get_collectd_dev() {
 				count=-1
 			;;
 		esac
-		range=10
+		range=40
 		drange=$range
 		srange=1
-		new=0
 		del="$delimeter_name"
 		delc="$delimeter_group_name_count"
 		plugin_instance_name=$(echo $object_name | cut -d "$del" -f -$delc)
@@ -153,14 +164,35 @@ get_collectd_dev() {
 			plugin_id="$plugin_id_name$plugin_id_description"
 		fi
 		[ -f "$DataDir/$ref_dev_name/bac-$plugin_instance/$collectd_types-$plugin_id.rrd" ] || new="1"
+		[ "$new" == "1" ] && $log "new file $DataDir/$ref_dev_name/bac-$plugin_instance/$collectd_types-$plugin_id.rrd"
 		#BUG collectd has no nano second input support
 		local utime=0
-		while [ $count -ge $drange ] ; do
+		while [ $count -ge $srange ] ; do
 			status=0
 			if [ "$new" == "1" ] ; then
-				bacrr $devid trend-log $obj_id log-buffer 1 $srange $range > $tmpdir/bactrt_$devid-$obj_id.json 2>/dev/null || status=1
-				drange=$(( drange + range ))
-				srange=$(( srange + range ))
+				#bacrr $devid trend-log $obj_id log-buffer 1 $srange $range > $tmpdir/bactrt_$devid-$obj_id.json 2>$tmpdir/bactrt_$devid-$obj_id.json.err || status=1
+				bacrr $devid trend-log $obj_id log-buffer 1 $srange $range > $tmpdir/bactrt_$devid-$obj_id.json 2>$tmpdir/bactrt_$devid-$obj_id.json.err
+				grep -q list $tmpdir/bactrt_$devid-$obj_id.json 2>/dev/null || status=1
+				#TODO
+				if [ $status == "1" ] ; then
+					local incrange="$range"
+					while [ $incrange -gt 1 ] ; do
+						incrange=$(($incrange-1))
+						bacrr $devid trend-log $obj_id log-buffer 1 $srange $incrange >$tmpdir/bactrt_$devid-$obj_id.json 2>$tmpdir/bactrt_$devid-$obj_id.json.err
+						grep -q list $tmpdir/bactrt_$devid-$obj_id.json 2>/dev/null && status=0
+						[ "$status" == "0" ] && break
+					done
+					if [ $status == "0" ] ; then
+						srange=$(( srange + incrange ))
+						$log_err "bacrr $srange $incrange"
+					else
+						srange=$(( srange + 1 ))
+						$log_err "bacrr ignore $srange 1"
+					fi
+				else
+					srange=$(( srange + range ))
+					$log_err "bacrr 1 OK $devid trend-log $obj_id log-buffer 1 $srange $range status $status"
+				fi
 			else
 				if [ $utime -eq 0 ] ; then
 					utime=$(rrdtool last "$DataDir/$ref_dev_name/bac-$plugin_instance/$collectd_types-$plugin_id.rrd")
@@ -168,9 +200,20 @@ get_collectd_dev() {
 				utime=$((utime+1))
 				date_slot=$(date -d "@$utime" "+%Y/%m/%d")
 				time_slot=$(date -d "@$utime" "+%H:%M:%S")
-				bacrr $devid trend-log $obj_id log-buffer 3 $date_slot $time_slot 40 > $tmpdir/bactrt_$devid-$obj_id.json 2>/dev/null || status=1
-				$log "get_collectd_dev bacrr $devid trend-log $obj_id log-buffer 3 $date_slot $time_slot 40 status $status"
-				#count=-1
+				bacrr $devid trend-log $obj_id log-buffer 3 $date_slot $time_slot $range > $tmpdir/bactrt_$devid-$obj_id.json 2>$tmpdir/bactrt_$devid-$obj_id.json.err
+				grep -q list $tmpdir/bactrt_$devid-$obj_id.json 2>/dev/null || status=1
+				if [ "$status" == "1" ] ; then
+					$log "bacrr 3 err $devid trend-log $obj_id log-buffer 3 $date_slot $time_slot $range status $status"
+					daytime=$(date '+%s')
+					olderthan=$((daytime - utime))
+					if [ $olderthan > 86400 -a "$(date "+%H%M")" == "0444" ] ; then
+						new=1
+					else
+						count=-1
+					fi
+				else
+					$log "bacrr 3 OK $devid trend-log $obj_id log-buffer 3 $date_slot $time_slot $range status $status"
+				fi
 			fi
 			grep -q list $tmpdir/bactrt_$devid-$obj_id.json 2>/dev/null || status=1
 			if [ "$status" == "0" ] ; then
@@ -214,7 +257,7 @@ get_collectd_dev() {
 									echo "PUTVAL $ref_dev_name/bac-$plugin_instance/$collectd_types-$plugin_id interval=10 $utime:$timeval" | \
 									socat - UNIX-CLIENT:"$SocketFile" | grep -q "Success" || collectd_err=1
 									if [ $collectd_err -eq 1 ] ; then
-										$log "collectd write err $ref_dev_name/bac-$plugin_instance/$collectd_types-$plugin_id"
+										$log_err "collectd write err $ref_dev_name/bac-$plugin_instance/$collectd_types-$plugin_id"
 									fi
 								#else
 									#BUG collectd has no nano second input support
@@ -241,8 +284,6 @@ get_collectd_dev() {
 				else
 					count=-1
 				fi
-			else
-				count=-1
 			fi
 			rm -f $tmpdir/bactrt_$devid-$obj_id.json
 		done
@@ -253,10 +294,13 @@ get_collectd() {
 	touch $tmpdir/collectd.last
 	config_load luci_statistics
 	config_get enable collectd_unixsock enable
+	[ "$enable" == "1" ] || $log_err "collectd_unixsock not enable"
 	[ "$enable" == "1" ] || return
 	config_get SocketFile collectd_unixsock SocketFile
+	[ -e "$SocketFile" ] || $log_err "collectd_unixsock no SocketFile $SocketFile"
 	[ -e "$SocketFile" ] || return
 	config_get DataDir collectd_rrdtool DataDir
+	[ -z "$DataDir" ] && $log_err "collectd_rrdtool no DataDir $DataDir"
 	[ -z "$DataDir" ] && return
 	if [ ! -f $tmpdir/devlist.json ] ; then
 		touch $tmpdir/devlist.json.get 2>/dev/null
@@ -286,7 +330,7 @@ get_collectd() {
 	json_cleanup
 	if [ "$devids" == "" ] ; then
 		touch $tmpdir/devlist.json.get
-		$log "get_collectd touch $tmpdir/devlist.json.get no device"
+		$log_err "get_collectd touch $tmpdir/devlist.json.get no device"
 		continue
 	fi
 	local invoke_id=202
@@ -294,11 +338,11 @@ get_collectd() {
 		if [ ! -f $tmpdir/objlist_$devid.json ] ; then
 			touch $tmpdir/objlist.json.get 2>/dev/null
 			touch $tmpdir/objlist_$devid.json.get 2>/dev/null
-			$log "get_collectd no objlist touch $tmpdir/objlist_$devid.json.get"
+			$log_err "get_collectd no objlist touch $tmpdir/objlist_$devid.json.get"
 			continue
 		fi
 		if [ ! -f $tmpdir/obj$devid-trend_log.json ] ; then
-			$log "get_collectd no tl objlist $tmpdir/obj$devid-trend_log.json"
+			$log_err "get_collectd no tl objlist $tmpdir/obj$devid-trend_log.json"
 			continue
 		fi
 		#while [ "$(pidof bacnetclient | wc -w)" -gt 1 ] ; do sleep 2;done
@@ -843,12 +887,6 @@ get_config() {
 	export BACNET_DELIMETER_GROUP_DESC_COUNT="$delimeter_group_desc_count"
 	config_get collectd_interval default collectd_interval 10
 	export COLLECTD_INTERVAL="$collectd_interval"
-	config_get debug default debug 0
-	if [ "$debug" -ne "0" ] ; then
-		export BACNET_DEBUG="$debug"
-		export BACNET_IP_DEBUG="$debug"                                                                                     
-		export BACNET_BIP6_DEBUG="$debug"
-	fi
 	config_get eventlist_interval default eventlist_interval 5
 	export EVENTLIST_INTERVAL="$eventlist_interval"
 	if [ -f /usr/bin/msmtp ] ; then
@@ -876,10 +914,23 @@ get_config() {
 		fi
 	fi
 	export BACNET_INVOKE_ID="20"
-	if [ "$BACNET_DEBUG" == "1" ] ; then
-		export log="logger -t bacnetclient"
-	else
-		export log="true"
+	export log=true
+	export log_err=true
+	config_get debug default debug 0
+	if [ "$debug" == "1" ] ; then
+		export log_err="logger -s -t bac"
+	fi
+	if [ "$debug" == "2" ] ; then
+		export log="logger -s -t bac"
+		export log_err="logger -s -t bac"
+	fi
+
+	config_get debug_stack default debug_stack 0
+	if [ "$debug_stack" == "1" ] ; then
+		logger -s -t bac "debug stack 1"
+		export BACNET_DEBUG="$debug"
+		export BACNET_IP_DEBUG="$debug"                                                                                     
+		export BACNET_BIP6_DEBUG="$debug"
 	fi
 	$log "config $BACNET_IFACE $BACNET_IP_PORT $BACNET_BBMD_ADDRESS $BACNET_BBMD_PORT"
 }
