@@ -21,15 +21,14 @@ var callFileList = rpc.declare({
 
 return view.extend({
 	render: function() {
-		var m, s, o;
 
-		m = new form.Map('bacnet_dev', 'BACnet server');
+		const m = new form.Map('bacnet_dev', 'BACnet server');
 		m.tabbed = false;
-		s = m.section(form.TypedSection, 'dev', _('interface configuration section'));
+		const s = m.section(form.TypedSection, 'dev', _('interface configuration section'));
 		s.anonymous = false;
 		s.addremove = true;
 		s.addbtntitle = _('Add new interface...');
-		o = s.option(form.Flag, 'enable', _('Enabled'));
+		let o = s.option(form.Flag, 'enable', _('Enabled'));
 		o.rmempty = false;
 		o = s.option(form.Flag, 'debug', _('debug'));
 		o.rmempty = false;
@@ -56,13 +55,14 @@ return view.extend({
 		o.value('ethernet','Ethernet');
 		o.value('mstp','MSTP/RS485');
 		o.optional = true;
-		//o = s.option(form.Value, "iface", _("Interface"), _("The interface bacnet should serve."));
-		o = s.option(widgets.DeviceSelect, 'iface', _('Device name', 'eth0'));
+		o = s.option(widgets.DeviceSelect, 'interface', _('Interface'), _('Network interface to bind (eg: eth0)'));
+		o.ucioption = 'iface';
+		o.noaliases = true;
+		o.loopback = true;
 		o.depends('bacdl', 'arcnet');
 		o.depends('bacdl', 'bip');
 		o.depends('bacdl', 'bip6');
 		o.depends('bacdl', 'ethernet');
-		o.datatype = "string";
 		o = s.option(form.Value, "serial", _("Serial Port"), _("The Serial Port bacnet should serve. /dev/ttyUSB0"));
 		o.ucioption = 'iface';
 		o.depends('bacdl', 'mstp');
