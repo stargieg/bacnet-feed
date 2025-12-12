@@ -25,6 +25,8 @@ start_dev() {
 	#/var/address_cache
 	#TODO generate static mstp mapping from uci
 	procd_set_param user "daemon"
+	# group "dialout" has rw acl on tty char dev for mstp
+	procd_set_param group "dialout"
 	procd_set_param respawn
 	procd_set_param stderr 1
 	procd_set_param command "$BIN"
