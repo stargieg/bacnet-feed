@@ -147,7 +147,7 @@ return view.extend({
 		o.optional = true;
 		o.placeholder = "192.168.1.255";
 		o.datatype = "ip4addr";
-		o = s.option(form.Value, "mac", _("MAC for MSTP"), "1");
+		o = s.option(form.Value, "mac_address", _("MAC for MSTP"), "1");
 		o.depends('bacdl', 'mstp');
 		o.optional = true;
 		o.rmempty = true;
@@ -159,14 +159,14 @@ return view.extend({
 		o.rmempty = true;
 		o.datatype = "range(0,127)";
 		o.placeholder = 127;
-		o = s.option(form.Value, "max_frames", _("MAX Frames for MSTP"), "128");
+		o = s.option(form.Value, "max_info_frames", _("MAX Frames for MSTP"), "128");
 		o.depends('bacdl', 'mstp');
 		o.optional = true;
 		o.rmempty = true;
 		o.datatype = "range(0,128)";
 		o.modalonly = true;
 		o.placeholder = 128;
-		o = s.option(form.ListValue, "baud", _("Datarate"), "38400");
+		o = s.option(form.ListValue, "baud_rate", _("Datarate"), "38400");
 		o.depends('bacdl', 'mstp');
 		o.value("9600");
 		o.value("19200");
