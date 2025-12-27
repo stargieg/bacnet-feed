@@ -138,7 +138,10 @@ return view.extend({
 		o.datatype = "string";
 		o = s.option(form.Value, "delimeter_group_desc_count", _("fields of objct description"), _("fields of objct name for group"));
 		o.datatype = "portrange";
-		o = s.option(form.Flag, 'debug', _('Debug Log'));
+		o = s.option(form.Value, 'debug', _('Debug Log'));
+		o.value('0','Off');
+		o.value('1','Error');
+		o.value('2','Debug');
 		o.rmempty = false;
 		return m.render();
 	}

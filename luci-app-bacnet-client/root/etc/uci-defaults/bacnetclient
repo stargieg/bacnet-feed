@@ -7,6 +7,7 @@ uci del luci_statistics.collectd_rrdtool.RRATimespans
 for i in '5min' '15min' '1hour' '3hour' '12hour' '1day' '3day' '1week' '3week' '1month' '3month' '1year' '3year' '10year' ; do
 	uci add_list luci_statistics.collectd_rrdtool.RRATimespans="$i"
 done
+uci set luci_statistics.collectd_rrdtool.HeartBeat='86400'
 uci set luci_statistics.rrdtool.default_timespan='3hour'
 uci commit luci_statistics
 /etc/init.d/luci_statistics restart
