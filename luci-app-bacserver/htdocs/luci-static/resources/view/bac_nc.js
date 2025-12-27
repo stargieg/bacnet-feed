@@ -21,6 +21,15 @@ return view.extend({
 		o = s.option(form.Value, "description", _("Description"), "Description");
 		o.optional = true;
 		o.datatype = "string";
+		o = s.option(form.Value, "evt_msg_offnormal", _("off-normal"), "Message Off-Normal");
+		o.optional = true;
+		o.datatype = "string";
+		o = s.option(form.Value, "evt_msg_fault", _("fault"), "Message Fault");
+		o.optional = true;
+		o.datatype = "string";
+		o = s.option(form.Value, "evt_msg_normal", _("normal"), "Message Normal");
+		o.optional = true;
+		o.datatype = "string";
 		o = s.option(form.ListValue, 'ack_required', _('ACK required'));
 		o.value("0","NONE");
 		o.value("1","OFFNORMAL");

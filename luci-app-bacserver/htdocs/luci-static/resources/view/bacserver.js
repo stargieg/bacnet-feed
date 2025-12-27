@@ -82,7 +82,7 @@ return view.extend({
 		o.optional = true;
 		o.placeholder = 47808;
 		o.datatype = "portrange";
-		o = s.option(form.Value, "broadcast", _("Broadcast addr"), "65294=ff0e 65282=ff02");
+		o = s.option(form.Value, "broadcast", _("Broadcast addr"), "65294=ff0e 65282=ff02 65285=ff05");
 		o.depends('bacdl', 'bip');
 		o.depends('bacdl', 'bip6');
 		o.optional = true;
