@@ -6,7 +6,7 @@ index e5d9bc1d..cba7ae93 100644
  static const char *bws_hub_protocol = BSC_WEBSOCKET_HUB_PROTOCOL_STR;
  static const char *bws_direct_protocol = BSC_WEBSOCKET_DIRECT_PROTOCOL_STR;
  
-+#define PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP {{PTHREAD_MUTEX_RECURSIVE}}
++#define PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP {{{PTHREAD_MUTEX_RECURSIVE}}}
  static pthread_mutex_t bws_cli_mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
  
  /* Websockets protocol defined in BACnet/SC \S AB.7.1.  */
@@ -18,7 +18,7 @@ index 1ed0c91c..86f8d0ca 100644
      "Libwebsockets must be built with LWS_MAX_SMP > 1 (otherwise it does not support thread synchronization in correct way)"
  #endif
  
-+#define PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP {{PTHREAD_MUTEX_RECURSIVE}}
++#define PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP {{{PTHREAD_MUTEX_RECURSIVE}}}
  static pthread_mutex_t websocket_mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
  static pthread_mutex_t websocket_dispatch_mutex =
      PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
@@ -30,7 +30,7 @@ index f9afdb24..52955bf1 100644
  #error "BSC_CONF_WEBSOCKET_SERVERS_NUM must be >= 1"
  #endif
  
-+#define PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP {{PTHREAD_MUTEX_RECURSIVE}}
++#define PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP {{{PTHREAD_MUTEX_RECURSIVE}}}
  static pthread_mutex_t bws_global_mutex =
      PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
  static pthread_mutex_t bws_srv_direct_mutex[BSC_CONF_WEBSOCKET_SERVERS_NUM];

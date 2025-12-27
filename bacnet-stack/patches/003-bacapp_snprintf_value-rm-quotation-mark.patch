@@ -1,22 +1,22 @@
 diff --git a/src/bacnet/bacapp.c b/src/bacnet/bacapp.c
-index 1988867f..2fbe9237 100644
+index 5588b8cb0..d413ccd3f 100644
 --- a/src/bacnet/bacapp.c
 +++ b/src/bacnet/bacapp.c
-@@ -3043,8 +3043,6 @@ int bacapp_snprintf_value(
-             case BACNET_APPLICATION_TAG_CHARACTER_STRING:
-                 len = characterstring_length(&value->type.Character_String);
-                 char_str = characterstring_value(&value->type.Character_String);
--                slen = bacapp_snprintf(str, str_len, "\"");
--                ret_val += bacapp_snprintf_shift(slen, &str, &str_len);
+@@ -2086,8 +2086,6 @@ int bacapp_snprintf_character_string(
+ 
+     len = characterstring_length(value);
+     char_str = characterstring_value(value);
+-    slen = bacapp_snprintf(str, str_len, "\"");
+-    ret_val += bacapp_snprintf_shift(slen, &str, &str_len);
  #if (__STDC_VERSION__ >= 199901L) && defined(__STDC_ISO_10646__)
-                 if (characterstring_encoding(&value->type.Character_String) ==
-                     CHARACTER_UTF8) {
-@@ -3086,8 +3084,6 @@ int bacapp_snprintf_value(
-                         char_str++;
-                     }
-                 }
--                slen = bacapp_snprintf(str, str_len, "\"");
--                ret_val += slen;
-                 break;
- #endif
- #if defined(BACAPP_BIT_STRING)
+     if (characterstring_encoding(value) == CHARACTER_UTF8) {
+         while (len > 0) {
+@@ -2131,8 +2129,6 @@ int bacapp_snprintf_character_string(
+             char_str++;
+         }
+     }
+-    slen = bacapp_snprintf(str, str_len, "\"");
+-    ret_val += slen;
+ 
+     return ret_val;
+ }

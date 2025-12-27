@@ -1,0 +1,17 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index a1faaf5d1..1db78d6e1 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -983,8 +983,10 @@ if(BACNET_STACK_BUILD_APPS)
+   add_executable(delete-object apps/delete-object/main.c)
+   target_link_libraries(delete-object PRIVATE ${PROJECT_NAME})
+ 
+-  add_executable(epics apps/epics/main.c)
+-  target_link_libraries(epics PRIVATE ${PROJECT_NAME})
++  if(DBACNET_PROPERTY_LISTS)
++    add_executable(epics apps/epics/main.c)
++    target_link_libraries(epics PRIVATE ${PROJECT_NAME})
++  endif()
+ 
+   add_executable(error apps/error/main.c)
+   target_link_libraries(error PRIVATE ${PROJECT_NAME})

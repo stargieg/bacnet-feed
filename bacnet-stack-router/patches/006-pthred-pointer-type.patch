@@ -1,0 +1,13 @@
+diff --git a/ports/linux/dlmstp_port.c b/ports/linux/dlmstp_port.c
+index 547967b2d..374005b77 100644
+--- a/ports/linux/dlmstp_port.c
++++ b/ports/linux/dlmstp_port.c
+@@ -636,7 +636,7 @@ void dlmstp_get_broadcast_address(BACNET_ADDRESS *dest)
+ 
+ bool dlmstp_init(void *poPort, char *ifname)
+ {
+-    unsigned long hThread = 0;
++    pthread_t hThread = 0;
+     int rv = 0;
+     SHARED_MSTP_DATA *poSharedData;
+     struct termios2 newtio;

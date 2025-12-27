@@ -1,16 +1,16 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index a3c2f63fd..ba4356ba8 100644
+index a1faaf5d1..d09dd716d 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -225,6 +225,8 @@ add_library(${PROJECT_NAME}
+@@ -270,6 +270,8 @@ add_library(${PROJECT_NAME}
    src/bacnet/bacaction.h
    src/bacnet/bacapp.c
    src/bacnet/bacapp.h
 +  src/bacnet/bacapp_json.c
 +  src/bacnet/bacapp_json.h
+   src/bacnet/bacaudit.c
+   src/bacnet/bacaudit.h
    src/bacnet/bacdcode.c
-   src/bacnet/bacdcode.h
-   src/bacnet/bacdef.h
 diff --git a/apps/readrange/Makefile b/apps/readrange/Makefile
 index ea96f2094..b4cda5bb3 100644
 --- a/apps/readrange/Makefile
@@ -24,56 +24,27 @@ index ea96f2094..b4cda5bb3 100644
  
  # TARGET_EXT is defined in apps/Makefile as .exe or nothing
 diff --git a/apps/readrange/main.c b/apps/readrange/main.c
-index 30a99fecc..ea14068b1 100644
+index e097f156b..651589b6f 100644
 --- a/apps/readrange/main.c
 +++ b/apps/readrange/main.c
-@@ -180,10 +180,10 @@ static void print_help(const char *filename)
-            "you could send the following commands:\n");
-     printf("%s 123 trend-log 2 log-buffer 1 1 10\n", filename);
-     printf("%s 123 trend-log 2 log-buffer 2 1 10\n", filename);
--    printf("%s 123 trend-log 2 log-buffer 3 1/1/2014 00:00:01 10\n", filename);
-+    printf("%s 123 trend-log 2 log-buffer 3 2014/1/1 00:00:01 10\n", filename);
-     printf("%s 123 20 2 131 1 1 10\n", filename);
+@@ -185,8 +185,8 @@ static void print_help(const char *filename)
      printf("%s 123 20 2 131 2 1 10\n", filename);
+     printf("from starting date/time 1/1/2014 00:00:01 and read 10 entries,\n"
+            "you could send the following commands:\n");
+-    printf("%s 123 trend-log 2 log-buffer 3 1/1/2014 00:00:01 10\n", filename);
 -    printf("%s 123 20 2 131 3 1/1/2014 00:00:01 10\n", filename);
++    printf("%s 123 trend-log 2 log-buffer 3 2014/1/1 00:00:01 10\n", filename);
 +    printf("%s 123 20 2 131 3 2014/1/1 00:00:01 10\n", filename);
  }
  
  int main(int argc, char *argv[])
-@@ -248,7 +248,7 @@ int main(int argc, char *argv[])
-         return 1;
-     }
-     if (Target_Object_Range_Type == 1) {
--        if (argc < 7) {
-+        if (argc < 8) {
-             print_usage(filename);
-             return 0;
-         }
-@@ -258,7 +258,7 @@ int main(int argc, char *argv[])
-         RR_Request.Range.RefIndex = Target_Object_Index;
-         RR_Request.Count = Target_Object_Count;
-     } else if (Target_Object_Range_Type == 2) {
--        if (argc < 7) {
-+        if (argc < 8) {
-             print_usage(filename);
-             return 0;
-         }
-@@ -268,7 +268,7 @@ int main(int argc, char *argv[])
-         RR_Request.Range.RefSeqNum = Target_Object_Index;
-         RR_Request.Count = Target_Object_Count;
-     } else if (Target_Object_Range_Type == 3) {
--        if (argc < 8) {
-+        if (argc < 9) {
-             print_usage(filename);
-             return 0;
-         }
 diff --git a/src/bacnet/bacapp.h b/src/bacnet/bacapp.h
-index 6be770b1e..3824edc22 100644
+index 7971739c7..5fd9c6957 100644
 --- a/src/bacnet/bacapp.h
 +++ b/src/bacnet/bacapp.h
-@@ -212,6 +212,15 @@ typedef struct BACnet_Object_Property_Value {
-     BACNET_APPLICATION_DATA_VALUE *value;
- } BACNET_OBJECT_PROPERTY_VALUE;
+@@ -242,6 +242,15 @@ typedef struct BACnetDeviceObjectPropertyValue {
+     struct BACnetDeviceObjectPropertyValue *next;
+ } BACNET_DEVICE_OBJECT_PROPERTY_VALUE;
  
 +struct BACnet_Trendlog_Record;
 +typedef struct BACnet_Trendlog_Record {
@@ -89,10 +60,10 @@ index 6be770b1e..3824edc22 100644
  #endif /* __cplusplus */
 diff --git a/src/bacnet/bacapp_json.c b/src/bacnet/bacapp_json.c
 new file mode 100644
-index 000000000..93bf8a6a5
+index 000000000..54c56918d
 --- /dev/null
 +++ b/src/bacnet/bacapp_json.c
-@@ -0,0 +1,1492 @@
+@@ -0,0 +1,1458 @@
 +/**
 + * @file
 + * @brief Utilities for the BACnet_Application_Data_Value with json
@@ -129,40 +100,6 @@ index 000000000..93bf8a6a5
 +#include "bacnet/special_event.h"
 +#include "bacnet/basic/sys/platform.h"
 +#include "bacnet/bacapp.h"
-+
-+#if defined(BACAPP_SHED_LEVEL)
-+/**
-+ * @brief Print a value to a string for EPICS
-+ * @param str - destination string, or NULL for length only
-+ * @param str_len - length of the destination string, or 0 for length only
-+ * @param value - value to be printed
-+ * @return number of characters written to the string
-+ */
-+static int bacapp_snprintf_shed_level(
-+    char *str, size_t str_len, const BACNET_SHED_LEVEL *value)
-+{
-+    int length = 0;
-+
-+    switch (value->type) {
-+        case BACNET_SHED_TYPE_PERCENT:
-+            length = bacapp_snprintf(
-+                str, str_len, "%u%%", (unsigned)value->value.percent);
-+            break;
-+        case BACNET_SHED_TYPE_LEVEL:
-+            length = bacapp_snprintf(
-+                str, str_len, "%u", (unsigned)value->value.level);
-+            break;
-+        case BACNET_SHED_TYPE_AMOUNT:
-+            length = bacapp_snprintf(
-+                str, str_len, "%f", (double)value->value.amount);
-+            break;
-+        default:
-+            break;
-+    }
-+
-+    return length;
-+}
-+#endif
 +
 +/**
 + * @brief Print a value to a string for EPICS
@@ -296,7 +233,7 @@ index 000000000..93bf8a6a5
 +            ret_val = bacapp_snprintf_property_identifier(str, str_len, value);
 +            break;
 +        case PROP_OBJECT_TYPE:
-+            if (value <= BACNET_OBJECT_TYPE_LAST) {
++            if (value <= BACNET_OBJECT_TYPE_RESERVED_MIN) {
 +                ret_val = bacapp_snprintf(
 +                    str, str_len, "%s", bactext_object_type_name(value));
 +            } else if (value <= BACNET_OBJECT_TYPE_RESERVED_MAX) {
@@ -486,7 +423,7 @@ index 000000000..93bf8a6a5
 +
 +    slen = bacapp_snprintf(str, str_len, "(");
 +    ret_val += bacapp_snprintf_shift(slen, &str, &str_len);
-+    if (object_id->type <= BACNET_OBJECT_TYPE_LAST) {
++    if (object_id->type <= BACNET_OBJECT_TYPE_RESERVED_MIN) {
 +        slen = bacapp_snprintf(
 +            str, str_len, "%s, ", bactext_object_type_name(object_id->type));
 +    } else if (object_id->type < BACNET_OBJECT_TYPE_RESERVED_MAX) {
@@ -1653,7 +1590,7 @@ index 000000000..5f84b8962
 +#endif /* __cplusplus */
 +#endif
 diff --git a/src/bacnet/basic/object/trendlog.c b/src/bacnet/basic/object/trendlog.c
-index 24437a556..4e5a1a7df 100644
+index 2fadcdea9..5e39ff37b 100644
 --- a/src/bacnet/basic/object/trendlog.c
 +++ b/src/bacnet/basic/object/trendlog.c
 @@ -7,6 +7,8 @@
@@ -1665,7 +1602,7 @@ index 24437a556..4e5a1a7df 100644
  #include <string.h>
  /* BACnet Stack defines - first */
  #include "bacnet/bacdef.h"
-@@ -151,7 +153,7 @@ void Trend_Log_Init(void)
+@@ -155,7 +157,7 @@ void Trend_Log_Init(void)
      static bool initialized = false;
      int iLog;
      int iEntry;
@@ -1674,7 +1611,7 @@ index 24437a556..4e5a1a7df 100644
      bacnet_time_t tClock;
      uint8_t month;
  
-@@ -1513,6 +1515,130 @@ int TL_encode_entry(uint8_t *apdu, int iLog, int iEntry)
+@@ -1539,6 +1541,130 @@ int TL_encode_entry(uint8_t *apdu, int iLog, int iEntry)
      return (iLen);
  }
  
@@ -1688,7 +1625,7 @@ index 24437a556..4e5a1a7df 100644
 +    bool status_flags = false;
 +    BACNET_TAG tag;
 +    rec->next = NULL;
-+    rec->status.bits_used = NULL;
++    rec->status.bits_used = 0;
 +    while (apdu_len > 0) {
 +        if (IS_CONTEXT_SPECIFIC(apdu[0]) &&
 +            bacnet_is_opening_tag_number(&apdu[0], apdu_len, 0, NULL) &&
@@ -1705,11 +1642,11 @@ index 24437a556..4e5a1a7df 100644
 +            bacnet_is_opening_tag_number(&apdu[0], apdu_len, 1, &len) &&
 +            !log_value) {
 +            log_value = true;
-+            /* skip the opening tag */
++            // skip the opening tag
 +            apdu += len;
 +            apdu_len -= len;
 +
-+             /*  decode the next context tag which has th value type */
++            // decode the next context tag which has th value type
 +            len =
 +                bacnet_tag_decode(apdu, apdu_len, &tag);
 +            if (len <= 0) {
@@ -1751,15 +1688,15 @@ index 24437a556..4e5a1a7df 100644
 +                    rec->value.tag = BACNET_APPLICATION_TAG_NULL;
 +                    break;
 +                case TL_TYPE_STATUS:
-+                     /* print log status bits [log-disabled, buffer-purged, log-interrupted] */
-+                     /* should be copy to rec->status? */
++                    //print log status bits [log-disabled, buffer-purged, log-interrupted]
++                    //should be copy to rec->status?
 +                    rec->value.tag = BACNET_APPLICATION_TAG_BIT_STRING;
 +                    len = bacnet_bitstring_context_decode(
 +                        apdu, apdu_len, tag.number, &rec->value.type.Bit_String);
 +                    break;
 +                default:
-+                     /*  anything to do here? */
-+                     /*  skip over the value if we don't suppord decoding it */
++                    // anything to do here?
++                    // skip over the value if we don't suppord decoding it
 +                    break;
 +            }
 +            if (len <= 0) {
@@ -1768,7 +1705,7 @@ index 24437a556..4e5a1a7df 100644
 +            apdu += len;
 +            apdu_len -= len;
 +
-+             /*  skip over the closing tag [1] */
++            // skip over the closing tag [1]
 +            if (IS_CONTEXT_SPECIFIC(apdu[0]) &&
 +                bacnet_is_closing_tag_number(&apdu[0], apdu_len, 1, &len)) {
 +                    apdu += len;
@@ -1777,10 +1714,10 @@ index 24437a556..4e5a1a7df 100644
 +                return -1;
 +            }
 +        } else if (IS_CONTEXT_SPECIFIC(apdu[0]) && !status_flags) {
-+             /* TODO Check for Context Tag: 2 */
++            //TODO Check for Context Tag: 2
 +            status_flags = true;
 +
-+             /* print log status bits [in-alarm, fault, overriden, out-of-service] */
++            //print log status bits [in-alarm, fault, overriden, out-of-service]
 +            len = bacnet_bitstring_context_decode(apdu, apdu_len, 2, &rec->status);
 +            if (len > 0) {
 +                status = 1;
@@ -1795,7 +1732,7 @@ index 24437a556..4e5a1a7df 100644
 +                rec->next = calloc(sizeof(BACNET_TRENDLOG_RECORD), 1);
 +                rec = rec->next;
 +                rec->next = NULL;
-+                rec->status.bits_used = NULL;
++                rec->status.bits_used = 0;
 +            }
 +        }
 +    }
@@ -1806,10 +1743,10 @@ index 24437a556..4e5a1a7df 100644
      uint8_t *value,
      uint8_t *status,
 diff --git a/src/bacnet/basic/object/trendlog.h b/src/bacnet/basic/object/trendlog.h
-index ea05fb0c4..bed3bddfa 100644
+index cee604150..95da5d579 100644
 --- a/src/bacnet/basic/object/trendlog.h
 +++ b/src/bacnet/basic/object/trendlog.h
-@@ -171,6 +171,12 @@ bool TrendLogGetRRInfo(
+@@ -173,6 +173,12 @@ bool TrendLogGetRRInfo(
  BACNET_STACK_EXPORT
  int rr_trend_log_encode(uint8_t *apdu, BACNET_READ_RANGE_DATA *pRequest);
  
@@ -1823,10 +1760,10 @@ index ea05fb0c4..bed3bddfa 100644
  void trend_log_timer(uint16_t uSeconds);
  
 diff --git a/src/bacnet/basic/service/h_rr_a.c b/src/bacnet/basic/service/h_rr_a.c
-index 95404308e..a4d84290d 100644
+index 72c2b12cc..2557a1661 100644
 --- a/src/bacnet/basic/service/h_rr_a.c
 +++ b/src/bacnet/basic/service/h_rr_a.c
-@@ -13,14 +13,81 @@
+@@ -13,15 +13,82 @@
  #include "bacnet/apdu.h"
  #include "bacnet/bactext.h"
  #include "bacnet/readrange.h"
@@ -1836,6 +1773,7 @@ index 95404308e..a4d84290d 100644
  #include "bacnet/basic/object/device.h"
  #include "bacnet/basic/services.h"
  #include "bacnet/basic/tsm/tsm.h"
+ #include "bacnet/basic/sys/debug.h"
 +#include "bacnet/basic/object/trendlog.h"
  
  /** @file h_rr_a.c  Handles Read Range Acknowledgments. */
@@ -1867,12 +1805,12 @@ index 95404308e..a4d84290d 100644
 +        if (status < 1) {
 +            return;
 +        }
-+         /* json open list */
++        //json open list
 +        fprintf(stdout, "{\n \"list\": [\n");
 +        for (p = &entry; p != NULL; p = p->next) {
-+             /* json open array */
++            //json open array
 +            fprintf(stdout, "  [");
-+             /* print timestamp */
++            //print timestamp
 +            object_value.value = &value;
 +            value.tag = BACNET_APPLICATION_TAG_TIMESTAMP;
 +            value.type.Time_Stamp.tag = TIME_STAMP_DATETIME;
@@ -1881,25 +1819,25 @@ index 95404308e..a4d84290d 100644
 +            bacapp_print_value(stdout, &object_value);
 +            fprintf(stdout, "\",");
 +
-+             /* print log value or status bits [log-disabled, buffer-purged, log-interrupted] */
++            //print log value or status bits [log-disabled, buffer-purged, log-interrupted]
 +            object_value.value = &p->value;
 +            bacapp_json_print_value(stdout, &object_value);
 +            fprintf(stdout, ",");
 +
-+             /* print log status bits [in-alarm, fault, overriden, out-of-service] */
++            //print log status bits [in-alarm, fault, overriden, out-of-service]
 +            object_value.value = &value;
 +            value.tag = BACNET_APPLICATION_TAG_BIT_STRING;
 +            value.type.Bit_String = p->status;
-+             /* TODO replace {} with [] in bacapp_snprintf_value #BACNET_APPLICATION_TAG_BIT_STRING */
++            //TODO replace {} with [] in bacapp_snprintf_value #BACNET_APPLICATION_TAG_BIT_STRING
 +            bacapp_json_print_value(stdout, &object_value);
 +
 +            if (p->next)
 +                fprintf(stdout, "],\n");
 +            else
-+                 /* json last element */
++                //json last element
 +                fprintf(stdout, "]\n");
 +        }
-+         /* json close list */
++        //json close list
 +        fprintf(stdout, " ]\n}\n");
 +#endif
 +    }
@@ -1908,16 +1846,16 @@ index 95404308e..a4d84290d 100644
  /* for debugging... */
  static void PrintReadRangeData(BACNET_READ_RANGE_DATA *data)
  {
-@@ -101,6 +168,11 @@ void handler_read_range_ack(
- #endif
- 
+@@ -118,7 +185,11 @@ void handler_read_range_ack(
+     (void)service_data; /* we could use these... */
+     len = rr_ack_decode_service_request(service_request, service_len, &data);
      if (len > 0) {
 -        PrintReadRangeData(&data);
-+        fprintf(stderr, "Received ReadRange Len: %i\n",len);
 +        if (data.object_type == OBJECT_TRENDLOG) {
 +            PrintReadRangeDataTrendlog(&data);
 +        } else {
 +            PrintReadRangeData(&data);
 +        }
-     }
- }
+     } else {
+ #if PRINT_ENABLED
+         fprintf(stderr, "Received ReadRange Ack!\n");
