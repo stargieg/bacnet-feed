@@ -12,7 +12,7 @@ define Package/luci-app-bacserver
   CATEGORY:=LuCI
   SUBMENU:=3. Applications
   TITLE:=Bacnet Device
-  EXTRA_DEPENDS:=bacnet-stack-server, luci-mod-admin-full
+  EXTRA_DEPENDS:=bacnet-stack-server (>=0), luci-mod-admin-full (>=0)
 endef
 
 define Build/Prepare

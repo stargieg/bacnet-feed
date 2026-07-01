@@ -58,11 +58,12 @@ get_collectd_dev() {
 		local ret_cont="0"
 		local new="0"
 		#197=logging-type -1=prio -1=index 9=APPLICATION_TAG_ENUMERATED 2=triggerd
-		ret="$(bacwp $devid trend-log $obj_id 197 -1 -1 9 1)" || $log "$ret"
+		#ret="$(bacwp $devid trend-log $obj_id 197 -1 -1 9 1)" || $log "$ret"
 		#205=Trigger -1=prio -1=index 1=APPLICATION_TAG_BOOLEAN 1=trigger record
-		ret="$(bacwp $devid trend-log $obj_id 205 -1 -1 1 1)" || $log "$ret"
+		#ret="$(bacwp $devid trend-log $obj_id 205 -1 -1 1 1)" || $log "$ret"
 		#197=logging-type -1=prio -1=index 9=APPLICATION_TAG_ENUMERATED 1=cov record (0=polled)
-		ret="$(bacwp $devid trend-log $obj_id 197 -1 -1 9 1)" || $log "$ret"
+		#ret="$(bacwp $devid trend-log $obj_id 197 -1 -1 9 1)" || $log "$ret"
+		#ret="$(bacwp $devid trend-log $obj_id 197 -1 -1 9 0)" || $log "$ret"
 		count="$(bacrp $devid trend-log $obj_id 141)" || ret_cont=1
 		[ "$ret_cont" == "1" ] && $log_err "count $count"
 		[ "$ret_cont" == "1" ] && continue
@@ -91,7 +92,7 @@ get_collectd_dev() {
 		local tmpfile="$tmpdir/objlist_$ref_devid-$ref_object_type-$ref_object_instance.json.tmp"
 		case $ref_object_type in
 			analog*)
-				#77=object_name, 28=Description, 117=units 
+				#77=object_name, 28=Description, 117=units
 				bacrpm $ref_devid $ref_object_type $ref_object_instance 77,28,117 | tr -d '\r' > $tmpfile
 				value_units="$(grep units $tmpfile | sed -e 's/.*units: \(.*\)/\1/')"
 				;;
@@ -139,7 +140,7 @@ get_collectd_dev() {
 				count=-1
 			;;
 		esac
-		range=40
+		range=20
 		drange=$range
 		srange=1
 		del="$delimeter_name"
@@ -254,11 +255,13 @@ get_collectd_dev() {
 								if [ $utimenew -gt $utime ] ; then
 									utime=$utimenew
 									local collectd_err=0
+									#$log_err "PUTVAL $ref_dev_name/bac-$plugin_instance/$collectd_types-$plugin_id interval=10 $utime:$timeval"
 									echo "PUTVAL $ref_dev_name/bac-$plugin_instance/$collectd_types-$plugin_id interval=10 $utime:$timeval" | \
 									socat - UNIX-CLIENT:"$SocketFile" | grep -q "Success" || collectd_err=1
 									if [ $collectd_err -eq 1 ] ; then
 										$log_err "collectd write err $ref_dev_name/bac-$plugin_instance/$collectd_types-$plugin_id"
 									fi
+									#sleep 1
 								#else
 									#BUG collectd has no nano second input support
 									#ns=${time:20}
@@ -445,14 +448,68 @@ get_event() {
 	if [ "$BACNET_MAIL" == "1" ] ; then
 		$log "msmtp $dev $id $object_type $object_instance $event_state"
 		if [ ! -f $tmpdir/bacevent/$id-$object_type-$object_instance-$event_state_u ] ; then
+		    > $tmpdir/mail.txt
+			echo 'MIME-Version: 1.0' >> $tmpdir/mail.txt
+			echo 'Content-Type: text/plain; charset=utf-8; format=flowed' >> $tmpdir/mail.txt
+			echo 'Content-Transfer-Encoding: 8bit' >> $tmpdir/mail.txt
 			$log "msmtp $id $object_type $object_instance $event_state"
-			echo "To: $BACNET_MAIL_TO" > $tmpdir/mail.txt
-			echo "Cc: $BACNET_MAIL_CC" >> $tmpdir/mail.txt
-			echo "Bcc: $BACNET_MAIL_BCC" >> $tmpdir/mail.txt
-			cat /etc/bacalarmtemplate.txt | sed -e "s/#event_state#/$event_state/"\
-			 -e "s/#dev#/$dev/"  -e "s/#object_name#/$object_name/"  -e "s/#Description#/$Description/" \
-			 -e "s/#value#/$value $unit   $low_limit $unit - $high_limit $unit/"  -e "s/#devdesc#/$devdesc/"  -e "s/#devloc#/$devloc/" \
-			 -e "s/#event_time_stamp#/$event_time_stamp_offnormal/" >> $tmpdir/mail.txt
+			if echo "$Description" | grep -n -q $'[^\1-\177]' ; then
+			    Description_head=$(echo "$Description" | base64encode.uc)
+				Description_head="=?utf-8?b?""$Description_head""?="
+			else
+			    Description_head="$Description"
+			fi
+			if echo "$event_state" | grep -n -q $'[^\1-\177]' ; then
+			    event_state_head=$(echo "$event_state" | base64encode.uc)
+				event_state_head="=?utf-8?b?""$event_state_head""?="
+			else
+			    event_state_head="$event_state"
+			fi
+			if echo "$dev" | grep -n -q $'[^\1-\177]' ; then
+			    dev_head=$(echo "$dev" | base64encode.uc)
+				dev_head="=?utf-8?b?""$dev_head""?="
+			else
+			    dev_head="$dev"
+			fi
+			if echo "$object_name" | grep -n -q $'[^\1-\177]' ; then
+			    object_name_head=$(echo "$dev" | base64encode.uc)
+				object_name_head="=?utf-8?b?""$object_name_head""?="
+			else
+			    object_name_head="$dev"
+			fi
+			$log "msmtp to: $BACNET_MAIL_NAME_TO"
+			if [ -n "$BACNET_MAIL_NAME_TO" ] ; then
+    			if echo "$BACNET_MAIL_NAME_TO" | grep -n -q $'[^\1-\177]' ; then
+    			    to_name_head="=?utf-8?b?"$(echo "$BACNET_MAIL_NAME_TO" | base64encode.uc)"?="
+                else
+       			    to_name_head="$BACNET_MAIL_NAME_TO"
+    			fi
+         	    echo "To: $to_name_head<$BACNET_MAIL_TO>" >> $tmpdir/mail.txt
+			else
+			    echo "To: $BACNET_MAIL_TO" >> $tmpdir/mail.txt
+			fi
+			if [ -n "$BACNET_MAIL_CC" ] ; then
+			    echo "Cc: $BACNET_MAIL_CC" >> $tmpdir/mail.txt
+			fi
+			if [ -n "$BACNET_MAIL_BCC" ] ; then
+			    echo "Bcc: $BACNET_MAIL_BCC" >> $tmpdir/mail.txt
+			fi
+			if [ -n "$BACNET_MAIL_NAME_FROM" ] ; then
+			    if echo "$BACNET_MAIL_NAME_FROM" | grep -n -q $'[^\1-\177]' ; then
+    			    from_name_head="=?utf-8?b?"$(echo "$BACNET_MAIL_NAME_FROM" | base64encode.uc)"?="
+                else
+       			    from_name_head="$BACNET_MAIL_NAME_FROM"
+    			fi
+			    echo "From: $from_name_head<$BACNET_MAIL_FROM>" >> $tmpdir/mail.txt
+			else
+			    echo "From: $BACNET_MAIL_FROM" >> $tmpdir/mail.txt
+			fi
+			cat /etc/bacalarmtemplate.txt | sed -e "s/#event_state#/$event_state/" \
+			-e "s/#event_state_head#/$event_state_head/" -e "s/#Description_head#/$Description_head/" \
+			-e "s/#dev_head#/$dev_head/" -e "s/#object_name_head#/$object_name_head/" \
+			-e "s/#dev#/$dev/" -e "s/#object_name#/$object_name/" -e "s/#Description#/$Description/" \
+			-e "s/#value#/$value $unit   $low_limit $unit - $high_limit $unit/"  -e "s/#devdesc#/$devdesc/"  -e "s/#devloc#/$devloc/" \
+			-e "s/#event_time_stamp#/$event_time_stamp_offnormal/" >> $tmpdir/mail.txt
 			echo "$BACNET_MAIL_PW" > $tmpdir/mail_pw.txt
 			ping -4 -c 1 $BACNET_MAIL_SERVER >/dev/null 2>/dev/null
 			/usr/bin/msmtp --host="$BACNET_MAIL_SERVER" --port="$BACNET_MAIL_PORT" --tls="on" --auth="plain" --user="$BACNET_MAIL_USER" --password="cat $tmpdir/mail_pw.txt" --from="$BACNET_MAIL_FROM" --read-recipients --syslog="on" -- "$BACNET_MAIL_TO" < $tmpdir/mail.txt >/dev/null 2>/dev/null
@@ -730,7 +787,9 @@ devlist() {
 			done
 			if [ "$deny" == "0" ] ; then
 				while [ "$(pidof bacnetclient | wc -w)" -gt 20 ];do sleep 1;done
+				while [ "$(cut -d '.' -f 1 /proc/loadavg)" -gt 2 ];do sleep 1;done
 				get_devlist "$devid" "$invoke_id" &
+				sleep 3
 				invoke_id=$(( invoke_id + 10 ))
 			fi
 		done
@@ -796,7 +855,9 @@ objlistjson() {
 	local invoke_id=201
 	for id in $ids; do
 		while [ "$(pidof bacnetclient | wc -w)" -gt 20 ];do sleep 1;done
+		while [ "$(cut -d '.' -f 1 /proc/loadavg)" -gt 2 ];do sleep 1;done
 		get_objlist "$id" "$invoke_id" &
+		sleep 3
 		invoke_id=$(( invoke_id + 10 ))
 	done
 	while [ "$(pidof bacnetclient | wc -w)" -gt 2 ];do sleep 2;done
@@ -895,8 +956,12 @@ get_config() {
 		if [ "$BACNET_MAIL" == "1" ] ; then
 			config_get mail_from default mail_from
 			[ -z "$mail_from" ] || export BACNET_MAIL_FROM="$mail_from"
+			config_get mail_name_from default mail_name_from
+			[ -z "$mail_name_from" ] || export BACNET_MAIL_NAME_FROM="$mail_name_from"
 			config_get mail_to default mail_to
 			[ -z "$mail_to" ] || export BACNET_MAIL_TO="$mail_to"
+			config_get mail_name_to default mail_name_to
+			[ -z "$mail_name_to" ] || export BACNET_MAIL_NAME_TO="$mail_name_to"
 			config_get mail_cc default mail_cc
 			[ -z "$mail_cc" ] || export BACNET_MAIL_CC="$mail_cc"
 			config_get mail_bc default mail_bcc
@@ -929,7 +994,7 @@ get_config() {
 	if [ "$debug_stack" == "1" ] ; then
 		logger -s -t bac "debug stack 1"
 		export BACNET_DEBUG="$debug"
-		export BACNET_IP_DEBUG="$debug"                                                                                     
+		export BACNET_IP_DEBUG="$debug"
 		export BACNET_BIP6_DEBUG="$debug"
 	fi
 	$log "config $BACNET_IFACE $BACNET_IP_PORT $BACNET_BBMD_ADDRESS $BACNET_BBMD_PORT"
@@ -967,12 +1032,12 @@ case "$1" in
 	;;
 	call)
 		case "$2" in
-			eventlist) 
+			eventlist)
 				cat $tmpdir/eventlist.json || \
 				echo '{"list": [ { "idx": "0","devid": "'$(date +%M%S)'", "devname": "wait"} ] }'
 				touch $tmpdir/eventlist.json.get
 			;;
-			devlist) 
+			devlist)
 				cat $tmpdir/devlist.json || \
 				echo '{"list": [ { "devid": "'$(date +%M%S)'","object_name": "wait"} ] }'
 				touch $tmpdir/devlist.json.get

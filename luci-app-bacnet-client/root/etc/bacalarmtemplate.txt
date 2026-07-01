@@ -1,4 +1,5 @@
-Subject: #event_state# #dev# #object_name# #Description#
+Subject: #event_state_head# #dev_head# #object_name_head# #Description_head#
+
 #event_state#!
 
 Name: #dev# #object_name#
@@ -8,7 +9,7 @@ Anlage: #devdesc#
 Ort: #devloc#
 Zeit: #event_time_stamp#
 Maßnahme: Kontrolle
-Zuständig: Fa. Grikon, Tel.: 0170 ...
+Zuständig: Fa. Grikon, Tel.: +491705769851
 
 
 Diese Mail wurde automatisch erstellt.

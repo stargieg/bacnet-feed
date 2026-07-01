@@ -1,71 +1,80 @@
-'use strict';
-'require view';
-'require form';
-'require tools.widgets as widgets';
+"use strict";
+"require view";
+"require form";
+"require tools.widgets as widgets";
 
 return view.extend({
-	render: function() {
+	render: function () {
 		var m, s, o;
 
-		m = new form.Map('bacnetclient', 'BACnet Client');
-		s = m.section(form.TypedSection, 'dev', _('interface configuration section'));
+		m = new form.Map("bacnetclient", "BACnet Client");
+		s = m.section(
+			form.TypedSection,
+			"dev",
+			_("interface configuration section"),
+		);
 		s.anonymous = false;
 		s.addremove = true;
-		o = s.option(form.ListValue, 'bacdl', _('Data link'));
-		o.value('arcnet','Arcnet');
-		o.value('bip','IPv4');
-		o.value('bip6','IPv6');
-		o.value('ethernet','Ethernet');
-		o.value('mstp','MSTP/RS485');
+		o = s.option(form.ListValue, "bacdl", _("Data link"));
+		o.value("arcnet", "Arcnet");
+		o.value("bip", "IPv4");
+		o.value("bip6", "IPv6");
+		o.value("ethernet", "Ethernet");
+		o.value("mstp", "MSTP/RS485");
 		o.optional = true;
-		o = s.option(widgets.DeviceSelect, 'iface', _('Device name', 'br-lan'));
-		o.depends('bacdl', 'arcnet');
-		o.depends('bacdl', 'bip');
-		o.depends('bacdl', 'bip6');
-		o.depends('bacdl', 'ethernet');
+		o = s.option(widgets.DeviceSelect, "iface", _("Device name", "br-lan"));
+		o.depends("bacdl", "arcnet");
+		o.depends("bacdl", "bip");
+		o.depends("bacdl", "bip6");
+		o.depends("bacdl", "ethernet");
 		o.datatype = "string";
-		o = s.option(form.Value, "serial", _("Serial Port"), _("The Serial Port bacnet should serve. /dev/ttyUSB0"));
-		o.depends('bacdl', 'mstp');
+		o = s.option(
+			form.Value,
+			"serial",
+			_("Serial Port"),
+			_("The Serial Port bacnet should serve. /dev/ttyUSB0"),
+		);
+		o.depends("bacdl", "mstp");
 		o.datatype = "string";
 		o.placeholder = "/dev/ttyUSB0";
 		o = s.option(form.Value, "port", _("IP Port"), "47808");
-		o.depends('bacdl', 'bip');
-		o.depends('bacdl', 'bip6');
+		o.depends("bacdl", "bip");
+		o.depends("bacdl", "bip6");
 		o.optional = true;
 		o.placeholder = 47808;
 		o.datatype = "portrange";
 		o = s.option(form.Value, "bbmd_addr", _("BBMD IP Adresse"), "");
-		o.depends('bacdl', 'bip');
-		o.depends('bacdl', 'bip6');
+		o.depends("bacdl", "bip");
+		o.depends("bacdl", "bip6");
 		o.optional = true;
 		o.datatype = "host";
 		o = s.option(form.Value, "bbmd_port", _("BBMD IP Port"), "47808");
-		o.depends('bacdl', 'bip');
-		o.depends('bacdl', 'bip6');
+		o.depends("bacdl", "bip");
+		o.depends("bacdl", "bip6");
 		o.optional = true;
 		o.placeholder = 47808;
 		o.datatype = "portrange";
 		o = s.option(form.Value, "mac", _("MAC for MSTP"), "1");
-		o.depends('bacdl', 'mstp');
+		o.depends("bacdl", "mstp");
 		o.optional = true;
 		o.rmempty = true;
 		o.datatype = "range(0,128)";
 		o.placeholder = 1;
 		o = s.option(form.Value, "max_master", _("MAX Master for MSTP"), "128");
-		o.depends('bacdl', 'mstp');
+		o.depends("bacdl", "mstp");
 		o.optional = true;
 		o.rmempty = true;
 		o.datatype = "range(0,128)";
 		o.placeholder = 128;
 		o = s.option(form.Value, "max_frames", _("MAX Frames for MSTP"), "1");
-		o.depends('bacdl', 'mstp');
+		o.depends("bacdl", "mstp");
 		o.optional = true;
 		o.rmempty = true;
 		o.datatype = "range(0,128)";
 		o.modalonly = true;
 		o.placeholder = 1;
 		o = s.option(form.ListValue, "baud", _("Datarate"), "38400");
-		o.depends('bacdl', 'mstp');
+		o.depends("bacdl", "mstp");
 		o.value("9600");
 		o.value("19200");
 		o.value("38400");
@@ -73,76 +82,142 @@ return view.extend({
 		o.value("115200");
 		o.optional = true;
 		o = s.option(form.ListValue, "parity_bit", _("Parity Bit"), "N");
-		o.depends('bacdl', 'mstp');
+		o.depends("bacdl", "mstp");
 		o.value("N");
 		o.value("O");
 		o.value("E");
 		o.optional = true;
 		o = s.option(form.ListValue, "data_bit", _("Data Bit"), "8");
-		o.depends('bacdl', 'mstp');
+		o.depends("bacdl", "mstp");
 		o.value("5");
 		o.value("6");
 		o.value("7");
 		o.value("8");
 		o.optional = true;
 		o = s.option(form.ListValue, "stop_bit", _("Stop Bit"), "1");
-		o.depends('bacdl', 'mstp');
+		o.depends("bacdl", "mstp");
 		o.value("1");
 		o.value("2");
 		o.optional = true;
-		o = s.option(form.DynamicList, "deny_list", _("Device deny list"), "devid");
+		o = s.option(
+			form.DynamicList,
+			"deny_list",
+			_("Device deny list"),
+			"devid",
+		);
 		o.optional = true;
-		o = s.option( form.Value, "collectd_interval", _("Trendlog interval for statistics"), "minutes");
+		o = s.option(
+			form.Value,
+			"collectd_interval",
+			_("Trendlog interval for statistics"),
+			"minutes",
+		);
 		o.optional = true;
 		o.rmempty = true;
 		o.datatype = "port";
-		o = s.option(form.DynamicList, "deny_list_log", _("Trendlog deny list"), "devid");
+		o = s.option(
+			form.DynamicList,
+			"deny_list_log",
+			_("Trendlog deny list"),
+			"devid",
+		);
 		o.optional = true;
-		o = s.option( form.Value, "eventlist_interval", _("Eventlist interval for mail"), "minutes");
+		o = s.option(
+			form.Value,
+			"eventlist_interval",
+			_("Eventlist interval for mail"),
+			"minutes",
+		);
 		o.optional = true;
 		o.rmempty = true;
 		o.datatype = "port";
-		o = s.option(form.Flag, 'mail', _('Mail'));
+		o = s.option(form.Flag, "mail", _("E-Mail notification"));
 		o.rmempty = false;
-		o = s.option(form.Value, "mail_from", _("Mail From"), _("From address"));
-		o.depends('mail', '1');
+		o = s.option(
+			form.Value,
+			"mail_from",
+			_("Mail From"),
+			_("From address"),
+		);
+		o.depends("mail", "1");
+		o.datatype = "string";
+		o = s.option(
+			form.Value,
+			"mail_name_from",
+			_("Mail From Name"),
+			_("From address name"),
+		);
+		o.depends("mail", "1");
 		o.datatype = "string";
 		o = s.option(form.Value, "mail_to", _("Mail To"), _("To address"));
-		o.depends('mail', '1');
+		o.depends("mail", "1");
+		o.datatype = "string";
+		o = s.option(
+			form.Value,
+			"mail_name_to",
+			_("Mail To Name"),
+			_("To address name"),
+		);
+		o.depends("mail", "1");
 		o.datatype = "string";
 		o = s.option(form.Value, "mail_cc", _("Mail Cc"), _("Cc address"));
-		o.depends('mail', '1');
+		o.depends("mail", "1");
 		o.datatype = "string";
 		o = s.option(form.Value, "mail_bcc", _("Mail Bcc"), _("Bcc address"));
-		o.depends('mail', '1');
+		o.depends("mail", "1");
 		o.datatype = "string";
-		o = s.option(form.Value, "mail_server", _("Mail Server"), _("hostname"));
-		o.depends('mail', '1');
+		o = s.option(
+			form.Value,
+			"mail_server",
+			_("Mail Server"),
+			_("hostname"),
+		);
+		o.depends("mail", "1");
 		o.datatype = "host";
 		o = s.option(form.Value, "mail_port", _("SMTP Port"), "587");
-		o.depends('mail', '1');
+		o.depends("mail", "1");
 		o.optional = true;
 		o.placeholder = 587;
 		o.datatype = "portrange";
 		o = s.option(form.Value, "mail_user", _("Username"), _("user"));
-		o.depends('mail', '1');
+		o.depends("mail", "1");
 		o.datatype = "string";
 		o = s.option(form.Value, "mail_pw", _("Password"), _("password"));
-		o.depends('mail', '1');
+		o.depends("mail", "1");
 		o.datatype = "string";
-		o = s.option(form.Value, "delimeter_name", _("delimeter character name"), _("Group delimeter charackter for the object name"));
+		o = s.option(
+			form.Value,
+			"delimeter_name",
+			_("delimeter character name"),
+			_("Group delimeter charackter for the object name"),
+		);
 		o.datatype = "string";
-		o = s.option(form.Value, "delimeter_group_name_count", _("fields of objct name"), _("fields of objct name for group"));
+		o = s.option(
+			form.Value,
+			"delimeter_group_name_count",
+			_("fields of objct name"),
+			_("fields of objct name for group"),
+		);
 		o.datatype = "portrange";
-		o = s.option(form.Value, "delimeter_desc", _("delimeter character description"), _("Group delimeter charackter for the object description"));
+		o = s.option(
+			form.Value,
+			"delimeter_desc",
+			_("delimeter character description"),
+			_("Group delimeter charackter for the object description"),
+		);
 		o.datatype = "string";
-		o = s.option(form.Value, "delimeter_group_desc_count", _("fields of objct description"), _("fields of objct name for group"));
+		o = s.option(
+			form.Value,
+			"delimeter_group_desc_count",
+			_("fields of objct description"),
+			_("fields of objct name for group"),
+		);
 		o.datatype = "portrange";
-		o = s.option(form.Value, 'debug', _('Debug Log'));
-		o.value('0','Off');
-		o.value('1','Error');
-		o.value('2','Debug');
+		o = s.option(form.Value, "debug", _("Debug Log"));
+		o.value("0", "Off");
+		o.value("1", "Error");
+		o.value("2", "Debug");
 		o.rmempty = false;
 		return m.render();
-	}
+	},
 });

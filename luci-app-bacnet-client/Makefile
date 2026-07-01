@@ -1,8 +1,8 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-bacnet-client
-PKG_VERSION:=0.2.9
-PKG_RELEASE:=2
+PKG_VERSION:=0.3.3
+PKG_RELEASE:=1
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
 
 include $(INCLUDE_DIR)/package.mk
@@ -12,7 +12,7 @@ define Package/luci-app-bacnet-client
   CATEGORY:=LuCI
   SUBMENU:=3. Applications
   TITLE:=Bacnet Device
-  EXTRA_DEPENDS:=luci-mod-admin-full, msmtp, luci-app-statistics, collectd-mod-unixsock, socat, bacnet-stack-utils-base
+  EXTRA_DEPENDS:=luci-mod-admin-full (>=25.00.00), msmtp (>=1.8.0), luci-app-statistics (>=25.00.00), collectd-mod-unixsock (>=5.0.0), socat (>=1.8.0), bacnet-stack-utils-base (>=0)
 endef
 
 define Build/Prepare
@@ -54,6 +54,8 @@ define Package/luci-app-bacnet-client/install
 	$(INSTALL_DATA) ./root/usr/share/rpcd/acl.d/* $(1)/usr/share/rpcd/acl.d
 	$(INSTALL_DIR) $(1)/usr/libexec/rpcd
 	$(INSTALL_BIN) ./root/usr/libexec/rpcd/* $(1)/usr/libexec/rpcd
+	$(INSTALL_DIR) $(1)/usr/bin
+	$(INSTALL_BIN) ./root/usr/bin/* $(1)/usr/bin
 endef
 
 $(eval $(call BuildPackage,luci-app-bacnet-client))
